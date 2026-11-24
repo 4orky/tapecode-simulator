@@ -750,7 +750,7 @@
     if (!save.cpu.lit) return { target: 'cpu', text: '去 CPU 神殿：给 4 位 CPU 上电，跑满 16 拍点亮它。' };
     if (save.processors.length === 0) return { target: 'factory', text: '去处理器工厂：花 5 游戏 BEM 开自己的处理器，自己定晶体管价——但先看清长尾：389 台里 111 台 0 产出。' };
     if (!save.visited.test1) return { target: 'test1', text: '去卡片馆：玩 5 张真实 Test1 电路卡的网表。' };
-    return { target: 'codex', text: '通关了！去图鉴看看生态全景（26 条），或者继续优化电路、冲击更少门数。' };
+    return { target: 'codex', text: '通关了！去图鉴看看生态全景（29 条），或者继续优化电路、冲击更少门数。' };
   }
   function milestones(save) {
     return [
@@ -1011,7 +1011,16 @@
       unlock: 'factory' },
     { id: 'tapesend', name: 'TapeSend', status: 'unverified', source: 'ECOSYSTEM §3.2',
       what: '号称“多链端到端加密消息层”，但除一句话介绍外找不到仓库、文档、API 或演示，很可能已被 TapeRelay 的消息功能取代。本游戏不声称调用它。',
-      unlock: 'test1' }
+      unlock: 'test1' },
+    { id: 'comparator', name: '比较器', status: 'live', source: 'GAME_CONCEPT §8 · PoD 题库真题',
+      what: '两个数比大小的电路：输出三路——a>b、a=b、a<b。先比高位：高位分胜负就不用看低位；高位相等才看低位。游戏里是第五道真题，34 个 NAND 门是标准做法。',
+      unlock: 'ch1' },
+    { id: 'sbox', name: 'S 盒', status: 'live', source: 'GAME_CONCEPT §8 · PoD 题库真题',
+      what: '密码学里的置换盒：4 位输入查表换成 4 位输出（PRESENT 密码的 S 盒），没有固定公式，只能按输入一位一位选。游戏里是第六道真题，4 级选择器树、184 个 NAND 门是标准做法。',
+      unlock: 'ch1' },
+    { id: 'life', name: '康威生命游戏', status: 'live', source: 'ECOSYSTEM §3.1 · Behemoth 标志性演示',
+      what: 'CPU 的第二种程序：同一台 CPU，换一块电路跑生命游戏。规则只有三句：3 个邻居出生、2 个邻居存活，其余都死。4×4 是 1,600 个 NAND 门、6×6 是 3,600 个 NAND 门，都是真电路、真仿真。Behemoth 在链上跑生命游戏，是 TapeOut 生态的标志性演示。',
+      unlock: 'cpu' }
   ];
   var STATUS_LABEL = { live: '✅ 已实现', alpha: '🧪 测试中', draft: '📝 草案', unverified: '❓ 未核实' };
   function codexUnlocked(save, entry) {

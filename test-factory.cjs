@@ -254,7 +254,7 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
   check('存档默认：200 NAND / 20 LATCH / 0 BEM',
     s.nand === 200 && s.latch === 20 && s.bem === 0 && s.day === 0);
   check('存档默认：全网权重 100000', s.totalWeight === 100000);
-  check('图鉴条目数', F.CODEX.length === 26, F.CODEX.length + ' 条');
+  check('图鉴条目数', F.CODEX.length === 29, F.CODEX.length + ' 条');
   check('六道真题都在', F.PROBLEMS.length === 6 && F.PROBLEMS.map(p => p.id).join(',') === 'fa,adder4,maj,shifter,cmp2,sbox');
 }
 
@@ -675,6 +675,16 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
   check('S 盒：参考解真值表 16/16', v.ok && v.passed === 16, v.ok ? '' : v.reason);
   check('S 盒：184 门 = par，3 星', F.starFor(184, 184, 240) === 3);
   check('S 盒：朴素 MUX 树 240 门仍在 limit 内，1 星', F.starFor(240, 184, 240) === 1);
+}
+
+// ---------- 24. 图鉴补新条目（第 17 轮） ----------
+{
+  const byId = id => F.CODEX.find(e => e.id === id);
+  check('图鉴：比较器条目在，ch1 解锁', byId('comparator') && byId('comparator').unlock === 'ch1');
+  check('图鉴：S 盒条目在，ch1 解锁', byId('sbox') && byId('sbox').unlock === 'ch1');
+  check('图鉴：生命游戏条目在，cpu 解锁', byId('life') && byId('life').unlock === 'cpu');
+  check('图鉴：生命游戏条目写明 3,600 门', /3,600/.test(byId('life').what));
+  check('图鉴：新条目都有来源', ['comparator', 'sbox', 'life'].every(id => byId(id).source && byId(id).what.length > 20));
 }
 
 console.log('\n' + lines.join('\n'));

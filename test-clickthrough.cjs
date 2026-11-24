@@ -287,7 +287,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // ---------- 图鉴 ----------
   nav('codex');
   await sleep(200);
-  check('图鉴：26 条', qa('.codex-card').length === 26);
+  check('图鉴：29 条', qa('.codex-card').length === 29);
   check('图鉴：已解锁进度显示', /已解锁/.test(q('#codex-progress').textContent), q('#codex-progress').textContent);
 
   console.log('\n' + lines.join('\n'));
