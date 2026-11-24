@@ -155,6 +155,24 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   check('第一章：验货真值表 8/8 全过', /真值表全过：8\/8/.test(q('#tt-panel').textContent), q('#status-line').textContent);
   check('第一章：通过记录 9 门 3 星', save().passed && save().passed.fa && save().passed.fa.gates === 9 && save().passed.fa.stars === 3);
   check('第一章：画布草稿已存档', save().drafts && save().drafts.fa && save().drafts.fa.gates.length === 9);
+  // 触屏拖拽（第 31 轮）：合成 Touch 事件拖 1 号门 +50/+20，存档里的门坐标跟着变
+  const touchGate = q('[data-gate="1"]');
+  const gx0 = save().drafts.fa.gates.find(g => g.id === 1).x;
+  const gy0 = save().drafts.fa.gates.find(g => g.id === 1).y;
+  function touch(type, x, y) {
+    const ev = new window.Event(type, { bubbles: true, cancelable: true });
+    ev.touches = [{ clientX: x, clientY: y }];
+    touchGate.dispatchEvent(ev);
+  }
+  touch('touchstart', 100, 100);
+  touch('touchmove', 150, 120);
+  touch('touchend', 150, 120);
+  await sleep(100);
+  const gx1 = save().drafts.fa.gates.find(g => g.id === 1).x;
+  const gy1 = save().drafts.fa.gates.find(g => g.id === 1).y;
+  check('第一章：触屏拖门，x +50 且 y 下移、已存档',
+    gx1 === Math.min(940, gx0 + 50) && gy1 > gy0,
+    '由 (' + gx0 + ',' + gy0 + ') → (' + gx1 + ',' + gy1 + ')');
 
   // ---------- 流片 ----------
   click(q('#btn-to-tapeout'));

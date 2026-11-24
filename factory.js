@@ -1595,7 +1595,9 @@
     var svg = box.querySelector('svg.bschem');
     if (!svg) return;
     var drag = null;
-    svg.addEventListener('mousedown', function (ev) {
+    // 共享处理器：鼠标与触屏共用（第 31 轮）——手机上也要能拖门、点脚连线。
+    // touchstart/touchmove 用 { passive: false } 才能 preventDefault，阻止页面滚动抢走拖拽。
+    function onDown(ev, x, y) {
       var pinIn = ev.target.closest ? ev.target.closest('.pin-in') : null;
       var pinOut = ev.target.closest ? ev.target.closest('.pin-out') : null;
       var rail = ev.target.closest ? ev.target.closest('[data-src]') : null;
@@ -1650,13 +1652,12 @@
       if (gate) {
         var g = gateById(B.draft, +gate.getAttribute('data-gate'));
         if (!g) return;
-        drag = { id: g.id, startX: ev.clientX, startY: ev.clientY, origX: g.x, origY: g.y, moved: false };
-        ev.preventDefault();
+        drag = { id: g.id, startX: x, startY: y, origX: g.x, origY: g.y, moved: false };
       }
-    });
-    svg.addEventListener('mousemove', function (ev) {
+    }
+    function onMove(x, y) {
       if (!drag) return;
-      var dx = ev.clientX - drag.startX, dy = ev.clientY - drag.startY;
+      var dx = x - drag.startX, dy = y - drag.startY;
       if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
       if (!drag.moved) return;
       var g = gateById(B.draft, drag.id);
@@ -1665,18 +1666,35 @@
       g.y = Math.max(20, Math.min(builderHeight() - 80, drag.origY + dy));
       var el = svg.querySelector('[data-gate="' + g.id + '"]');
       if (el) el.setAttribute('transform', 'translate(' + g.x + ',' + g.y + ')');
-    });
-    svg.addEventListener('mouseup', function (ev) {
+    }
+    function onUp() {
       if (!drag) return;
       var g = gateById(B.draft, drag.id);
       if (drag.moved && g) { persistDraft(); drawBuilder(); }
       else if (g) { B.selGate = g.id; B.selSrc = null; drawBuilder(); }
       drag = null;
-    });
+    }
+    svg.addEventListener('mousedown', function (ev) { onDown(ev, ev.clientX, ev.clientY); });
+    svg.addEventListener('mousemove', function (ev) { onMove(ev.clientX, ev.clientY); });
+    svg.addEventListener('mouseup', function () { onUp(); });
     svg.addEventListener('mouseleave', function () {
       if (drag && drag.moved) { persistDraft(); drawBuilder(); }
       drag = null;
     });
+    svg.addEventListener('touchstart', function (ev) {
+      if (ev.touches.length !== 1) return;
+      ev.preventDefault();
+      var t = ev.touches[0];
+      onDown(ev, t.clientX, t.clientY);
+    }, { passive: false });
+    svg.addEventListener('touchmove', function (ev) {
+      if (ev.touches.length !== 1) return;
+      ev.preventDefault();
+      var t = ev.touches[0];
+      onMove(t.clientX, t.clientY);
+    }, { passive: false });
+    svg.addEventListener('touchend', function (ev) { ev.preventDefault(); onUp(); }, { passive: false });
+    svg.addEventListener('touchcancel', function () { drag = null; });
   }
 
   function drawSimStrip() {
