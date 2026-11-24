@@ -75,7 +75,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // ---------- 第一章：画 9 门全加器（全程点 UI） ----------
   nav('ch1');
   await sleep(200);
-  check('第一章：4 道题标签', qa('.ptab').length === 4);
+  check('第一章：5 道题标签', qa('.ptab').length === 5);
   for (let i = 0; i < 9; i++) click(q('#btn-add-gate'));
   await sleep(100);
   check('第一章：点了 9 次加门，画布 9 门，晶体管 191',
@@ -192,6 +192,20 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   click(q('#btn-life-beat'));
   await sleep(100);
   check('生命游戏：再演化一代回到横三格，第 2 代', aliveCells() === '5,6,7' && /第 2 代/.test(q('#cpu-panel').textContent));
+  // 6×6：切换尺寸 → 36 格、轻型飞船 9 个活细胞、演化一代后第 1 代（gen 归零）
+  click(q('[data-size="6"]'));
+  await sleep(200);
+  check('生命游戏：切 6×6 后 36 格', qa('.life-cell').length === 36);
+  check('生命游戏：6×6 文案含 3,600 NAND', /3,600 NAND/.test(q('#cpu-panel').textContent));
+  click(q('[data-preset="lwss"]'));
+  await sleep(100);
+  check('生命游戏：轻型飞船 9 个活细胞', qa('.life-cell.alive').length === 9);
+  click(q('#btn-life-beat'));
+  await sleep(100);
+  check('生命游戏：6×6 演化一代后第 1 代', /第 1 代/.test(q('#cpu-panel').textContent));
+  click(q('[data-size="4"]'));
+  await sleep(200);
+  check('生命游戏：切回 4×4 后 16 格', qa('.life-cell').length === 16);
 
   // ---------- 处理器工厂（第五章：开厂与发币） ----------
   // 攒够 11 游戏 BEM（开厂 5 + mint 1 + 毕业锁 5）

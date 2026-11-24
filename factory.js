@@ -114,6 +114,17 @@
         return [y & 1, (y >> 1) & 1, (y >> 2) & 1, (y >> 3) & 1];
       },
       par: 26, limit: 32, rows: 'all'
+    },
+    {
+      id: 'cmp2', name: '2 位比较器', sub: 'PoD 真题 · 267 道题库之一',
+      teach: '2 位比较器：a（a1a0）和 b（b1b0）比大小，输出三路：a>b、a=b、a<b。先比高位：高位分胜负就不用看低位；高位相等才看低位。相等用同或门（XNOR），大小用“高位赢，或高位平且低位赢”——34 个 NAND 门是标准做法。',
+      nIn: 4, inNames: ['a1', 'a0', 'b1', 'b0'],
+      nOut: 3, outNames: ['a>b', 'a=b', 'a<b'],
+      truth: function (inp) {
+        var a = 2 * inp[0] + inp[1], b = 2 * inp[2] + inp[3];
+        return [a > b ? 1 : 0, a === b ? 1 : 0, a < b ? 1 : 0];
+      },
+      par: 34, limit: 40, rows: 'all'
     }
   ];
   function problemById(id) {
@@ -536,12 +547,16 @@
   // 0 入 16 出，输出脚是 16 格状态的复制。生成器先占位 LATCH 再回填 d，
   // 复制链分两批写（先 16 个 NOT 再 16 个 NOT），保证最后 16 个信号恰好是输出脚。
   var LIFE_N = 4, LIFE_CELLS = 16;
-  function lifeIndex(r, c) { return ((r + LIFE_N) % LIFE_N) * LIFE_N + ((c + LIFE_N) % LIFE_N); }
-  function lifeNeighbors(i) {
-    var r = Math.floor(i / LIFE_N), c = i % LIFE_N, out = [];
+  function lifeIndex(r, c, n) {
+    n = n || LIFE_N;
+    return ((r + n) % n) * n + ((c + n) % n);
+  }
+  function lifeNeighbors(i, n) {
+    n = n || LIFE_N;
+    var r = Math.floor(i / n), c = i % n, out = [];
     for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) {
       if (dr === 0 && dc === 0) continue;
-      out.push(lifeIndex(r + dr, c + dc));
+      out.push(lifeIndex(r + dr, c + dc, n));
     }
     return out;
   }
@@ -550,9 +565,17 @@
     block: { name: '方块', cells: [5, 6, 9, 10], note: '2×2 方块，永远不变' },
     glider: { name: '滑翔机', cells: [1, 6, 8, 9, 10], note: '5 格小飞机，在环面上一直飞' }
   };
-  function buildLifeCircuit() {
+  var LIFE_PRESETS_6 = {
+    blinker: { name: '闪烁器', cells: [14, 15, 16], note: '横三格 → 竖三格，2 代一循环' },
+    block: { name: '方块', cells: [14, 15, 20, 21], note: '2×2 方块，永远不变' },
+    glider: { name: '滑翔机', cells: [8, 15, 19, 20, 21], note: '5 格小飞机，在环面上一直飞' },
+    lwss: { name: '轻型飞船', cells: [7, 10, 17, 19, 23, 26, 27, 28, 29], note: '9 格飞船；6×6 环面太小，它会撞上自己的尾迹——电路仍按规则真算' }
+  };
+  function buildLifeCircuit(size) {
+    size = size || LIFE_N;
+    var cells = size * size;
     var recs = [];
-    var nextSig = 2 + LIFE_CELLS;
+    var nextSig = 2 + cells;
     function N(a, b) { recs.push([0, a, b]); return nextSig++; }
     function NOT(a) { return N(a, a); }
     function AND(a, b) { return NOT(N(a, b)); }
@@ -564,9 +587,9 @@
       return { s: XOR(x, cin), c: OR(AND(a, b), AND(cin, x)) };
     }
     var latchIdx = [];
-    for (var i = 0; i < LIFE_CELLS; i++) { latchIdx.push(recs.length); recs.push([1, 0]); }
+    for (var i = 0; i < cells; i++) { latchIdx.push(recs.length); recs.push([1, 0]); }
     function cellNext(i) {
-      var nb = lifeNeighbors(i).map(function (j) { return 2 + j; });
+      var nb = lifeNeighbors(i, size).map(function (j) { return 2 + j; });
       var alive = 2 + i;
       var f1 = FA(nb[0], nb[1], nb[2]);
       var f2 = FA(nb[3], nb[4], nb[5]);
@@ -581,17 +604,17 @@
       return OR(eq3, AND(alive, eq2));
     }
     var nexts = [];
-    for (var k = 0; k < LIFE_CELLS; k++) nexts.push(cellNext(k));
+    for (var k = 0; k < cells; k++) nexts.push(cellNext(k));
     nexts.forEach(function (d, i) { recs[latchIdx[i]][1] = d; });
     var bs = [];
-    for (var m = 0; m < LIFE_CELLS; m++) bs.push(NOT(2 + m));
+    for (var m = 0; m < cells; m++) bs.push(NOT(2 + m));
     bs.forEach(function (b) { NOT(b); });
     var total = 16;
     recs.forEach(function (r) { total += r[0] === 1 ? 4 : 7; });
     var bytes = new Uint8Array(total);
     bytes[0] = 0x54; bytes[1] = 0x41; bytes[2] = 0x50; bytes[3] = 0x4e;
     bytes[4] = 0x45; bytes[5] = 0x54; bytes[6] = 0x01; bytes[7] = 0x00;
-    bytes[11] = 0; bytes[15] = 16; // nIn = 0，nOut = 16
+    bytes[11] = 0; bytes[15] = cells; // nIn = 0，nOut = 格数
     var p = 16;
     recs.forEach(function (r) {
       bytes[p++] = r[0];
@@ -739,7 +762,7 @@
       codex: [], visited: {}, prologueDone: {}, drafts: {},
       sites: [], relayGiB: 0, lottery: { day: -1, entered: false, winner: '', won: false, seed: '' },
       cpu: { powered: false, clock: 0, count: 0, best: 0, lit: false,
-        life: { gen: 0, cells: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] } },
+        life: { gen: 0, size: 4, cells: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] } },
       processors: [], minedTotal: 0, tokens: []
     };
   }
@@ -1032,7 +1055,7 @@
     test1Placeholder: test1Placeholder,
     buildCounterCircuit: buildCounterCircuit, counterValue: counterValue,
     LIFE_N: LIFE_N, LIFE_CELLS: LIFE_CELLS, lifeIndex: lifeIndex, lifeNeighbors: lifeNeighbors,
-    LIFE_PRESETS: LIFE_PRESETS, buildLifeCircuit: buildLifeCircuit,
+    LIFE_PRESETS: LIFE_PRESETS, LIFE_PRESETS_6: LIFE_PRESETS_6, buildLifeCircuit: buildLifeCircuit,
     FACTORY_OPEN_COST_BEM: FACTORY_OPEN_COST_BEM, FACTORY_PRICES: FACTORY_PRICES,
     TOKEN_MINT_COST_BEM: TOKEN_MINT_COST_BEM, TOKEN_GRADUATE_COST_BEM: TOKEN_GRADUATE_COST_BEM,
     TOKEN_GRADUATE_MIN_AGE: TOKEN_GRADUATE_MIN_AGE, TOKEN_MINE_SHARE: TOKEN_MINE_SHARE,
@@ -2110,21 +2133,30 @@
   /* ================= 终章·其二：生命游戏界面 ================= */
   // 生命游戏是 CPU 的第二种程序：同一台 CPU，换一块电路（1,600 NAND + 16 LATCH），
   // 跑康威生命游戏。点格子摆初始图案，一拍就是一代。老存档没有 cpu.life 字段时补默认。
-  var LIFE = { circuit: null, sha: '', state: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], timer: null };
+  var LIFE = { circuits: {}, shas: {}, size: 4, state: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], timer: null };
+  function lifeSize() { return (SAVE.cpu.life && SAVE.cpu.life.size) || 4; }
+  function lifeCells(n) { return n * n; }
+  function lifeGateText(n) {
+    return n === 6 ? '3,600 NAND + 36 LATCH' : '1,600 NAND + 16 LATCH';
+  }
   function lifeCircuit() {
-    if (!LIFE.circuit) {
-      var b = buildLifeCircuit();
+    var n = lifeSize();
+    if (!LIFE.circuits[n]) {
+      var b = buildLifeCircuit(n);
       if (!b.ok) return null;
-      LIFE.circuit = b.circuit;
-      LIFE.sha = b.sha;
+      LIFE.circuits[n] = b.circuit;
+      LIFE.shas[n] = b.sha;
     }
-    return LIFE.circuit;
+    return LIFE.circuits[n];
   }
   function lifeSaveGuard() {
-    if (!SAVE.cpu.life || !SAVE.cpu.life.cells || SAVE.cpu.life.cells.length !== LIFE_CELLS) {
-      SAVE.cpu.life = { gen: 0, cells: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] };
+    var n = lifeSize();
+    if (!SAVE.cpu.life || !SAVE.cpu.life.cells || SAVE.cpu.life.cells.length !== n * n) {
+      SAVE.cpu.life = { gen: 0, size: n, cells: new Array(n * n).fill(0) };
     }
+    if (!SAVE.cpu.life.size) SAVE.cpu.life.size = n;
   }
+  function lifePresets() { return lifeSize() === 6 ? LIFE_PRESETS_6 : LIFE_PRESETS; }
   function lifeBeatOnce() {
     var c = lifeCircuit();
     if (!c) return;
@@ -2142,21 +2174,25 @@
       return;
     }
     lifeSaveGuard();
+    LIFE.size = lifeSize();
     LIFE.state = SAVE.cpu.life.cells.slice();
     var c = lifeCircuit();
+    var n = LIFE.size, cells = n * n;
     var alive = LIFE.state.reduce(function (a, x) { return a + x; }, 0);
-    var html = '<p class="hint">这台 CPU 的第二种程序：康威生命游戏，4×4 环面（上下左右都连通）。规则：3 个邻居出生、2 个邻居存活，其余都死。' +
-      '它也是真电路：1,600 NAND + 16 LATCH，网表 SHA-256 <code>' + (c ? LIFE.sha.slice(0, 18) + '…' : '—') +
+    var html = '<p class="hint">这台 CPU 的第二种程序：康威生命游戏，' + n + '×' + n + ' 环面（上下左右都连通）。规则：3 个邻居出生、2 个邻居存活，其余都死。' +
+      '它也是真电路：' + lifeGateText(n) + '，网表 SHA-256 <code>' + (c ? LIFE.shas[n].slice(0, 18) + '…' : '—') +
       '</code>，每拍都是 TapeSim 真仿真，不是 JS 算的动画。</p>' +
       '<div class="toolbar"><button id="btn-mode-counter2">🔢 计数器</button>' +
-      '<button id="btn-mode-life2" class="btn-primary">🧬 生命游戏</button></div>' +
-      '<div class="panel"><h3>🧬 生命游戏 · 第 ' + SAVE.cpu.life.gen + ' 代 · 活细胞 ' + alive + ' / 16</h3>' +
-      '<div class="life-grid">' + LIFE.state.map(function (v, i) {
+      '<button id="btn-mode-life2" class="btn-primary">🧬 生命游戏</button>' +
+      '<span class="hint">棋盘：</span><button data-size="4"' + (n === 4 ? ' class="btn-primary"' : '') + '>4×4</button>' +
+      '<button data-size="6"' + (n === 6 ? ' class="btn-primary"' : '') + '>6×6</button></div>' +
+      '<div class="panel"><h3>🧬 生命游戏 · 第 ' + SAVE.cpu.life.gen + ' 代 · 活细胞 ' + alive + ' / ' + cells + '</h3>' +
+      '<div class="life-grid' + (n === 6 ? ' size6' : '') + '">' + LIFE.state.map(function (v, i) {
         return '<button class="life-cell' + (v ? ' alive' : '') + '" data-cell="' + i + '" aria-label="格子 ' + i + '"></button>';
       }).join('') + '</div>' +
       '<p class="hint">点格子摆图案，或用预设：' +
-      Object.keys(LIFE_PRESETS).map(function (k) {
-        return '<button data-preset="' + k + '">' + LIFE_PRESETS[k].name + '</button>';
+      Object.keys(lifePresets()).map(function (k) {
+        return '<button data-preset="' + k + '">' + lifePresets()[k].name + '</button>';
       }).join(' ') + '</p>' +
       '<div class="toolbar">' +
       '<button class="btn-primary" id="btn-life-beat">▶ 演化一代</button>' +
@@ -2174,10 +2210,20 @@
         renderCpuLife();
       };
     });
+    Array.prototype.forEach.call(box.querySelectorAll('[data-size]'), function (btn) {
+      btn.onclick = function () {
+        cpuStopAuto();
+        var n = parseInt(btn.getAttribute('data-size'), 10);
+        SAVE.cpu.life = { gen: 0, size: n, cells: new Array(n * n).fill(0) };
+        save();
+        renderCpuLife();
+        setStatus(n === 6 ? '生命游戏换到 6×6：3,600 个 NAND 门的真电路，轻型飞船可以上场了。' : '生命游戏换回 4×4。');
+      };
+    });
     Array.prototype.forEach.call(box.querySelectorAll('[data-preset]'), function (btn) {
       btn.onclick = function () {
-        var p = LIFE_PRESETS[btn.getAttribute('data-preset')];
-        LIFE.state = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        var p = lifePresets()[btn.getAttribute('data-preset')];
+        LIFE.state = new Array(lifeCells(LIFE.size)).fill(0);
         p.cells.forEach(function (i) { LIFE.state[i] = 1; });
         lifeSaveGuard();
         SAVE.cpu.life.gen = 0;
@@ -2197,7 +2243,7 @@
     };
     $('btn-life-clear').onclick = function () {
       cpuStopAuto();
-      LIFE.state = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+      LIFE.state = new Array(lifeCells(LIFE.size)).fill(0);
       lifeSaveGuard();
       SAVE.cpu.life.gen = 0;
       SAVE.cpu.life.cells = LIFE.state.slice();

@@ -255,7 +255,7 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
     s.nand === 200 && s.latch === 20 && s.bem === 0 && s.day === 0);
   check('存档默认：全网权重 100000', s.totalWeight === 100000);
   check('图鉴条目数', F.CODEX.length === 26, F.CODEX.length + ' 条');
-  check('四道真题都在', F.PROBLEMS.length === 4 && F.PROBLEMS.map(p => p.id).join(',') === 'fa,adder4,maj,shifter');
+  check('五道真题都在', F.PROBLEMS.length === 5 && F.PROBLEMS.map(p => p.id).join(',') === 'fa,adder4,maj,shifter,cmp2');
 }
 
 // ---------- 12. 集市（第四章，P1） ----------
@@ -529,6 +529,66 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
   const v = F.verifyTruthTable(d);
   check('移位器：参考解真值表 64/64', v.ok && v.passed === 64, v.ok ? '' : v.reason);
   check('移位器：26 门 = par，3 星', F.starFor(26, 26, 32) === 3);
+}
+
+// ---------- 19. 第五道真题：2 位比较器（第 10 轮） ----------
+{
+  const prob = F.problemById('cmp2');
+  check('比较器：题在库里（4 入 3 出）', prob && prob.nIn === 4 && prob.nOut === 3 && prob.par === 34);
+  const t = prob.truth;
+  check('比较器：0=0 → 010', t([0, 0, 0, 0]).join('') === '010');
+  check('比较器：1>0 → 100', t([0, 1, 0, 0]).join('') === '100');
+  check('比较器：0<1 → 001', t([0, 0, 0, 1]).join('') === '001');
+  check('比较器：3>2 → 100', t([1, 1, 1, 0]).join('') === '100');
+  check('比较器：2<3 → 001', t([1, 0, 1, 1]).join('') === '001');
+  check('比较器：3=3 → 010', t([1, 1, 1, 1]).join('') === '010');
+  // 34 门参考解：eq = XNOR 高位 AND XNOR 低位；gt/lt = 高位赢，或高位平且低位赢
+  const d = F.newDraft('cmp2');
+  function nand(a, b) { const g = F.addGate(d, 0, 0, 0); g.in0 = a; g.in1 = b; return G(g.id); }
+  function not(a) { return nand(a, a); }
+  function and2(a, b) { return not(nand(a, b)); }
+  function or2(a, b) { return nand(not(a), not(b)); }
+  function xor2(a, b) { const tt = nand(a, b); return nand(nand(a, tt), nand(b, tt)); }
+  function xnor2(a, b) { return not(xor2(a, b)); }
+  const a1 = I(0), a0 = I(1), b1 = I(2), b0 = I(3);
+  const eq1 = xnor2(a1, b1), eq0 = xnor2(a0, b0);
+  const eq = and2(eq1, eq0);
+  const gt = or2(and2(a1, not(b1)), and2(eq1, and2(a0, not(b0))));
+  const lt = or2(and2(not(a1), b1), and2(eq1, and2(not(a0), b0)));
+  d.outputs = [gt, eq, lt];
+  check('比较器：参考解 34 门', d.gates.length === 34);
+  const v = F.verifyTruthTable(d);
+  check('比较器：参考解真值表 16/16', v.ok && v.passed === 16, v.ok ? '' : v.reason);
+  check('比较器：34 门 = par，3 星', F.starFor(34, 34, 40) === 3);
+}
+
+// ---------- 20. 生命游戏 6×6（第 11 轮） ----------
+{
+  const b6 = F.buildLifeCircuit(6);
+  check('生命 6×6：生成成功', b6.ok === true, b6.ok ? '' : (b6.reason || ''));
+  check('生命 6×6：0 入 36 出', b6.circuit.nIn === 0 && b6.circuit.nOut === 36);
+  check('生命 6×6：3,600 NAND + 36 LATCH', b6.circuit.nNand === 3600 && b6.circuit.nLatch === 36);
+  const ref6 = function (cells) {
+    const out = new Array(36).fill(0);
+    for (let i = 0; i < 36; i++) {
+      const n = F.lifeNeighbors(i, 6).reduce((a, j) => a + cells[j], 0);
+      out[i] = (n === 3 || (cells[i] === 1 && n === 2)) ? 1 : 0;
+    }
+    return out;
+  };
+  const lwss = new Array(36).fill(0);
+  F.LIFE_PRESETS_6.lwss.cells.forEach(i => { lwss[i] = 1; });
+  let state = lwss.slice(), ref = lwss.slice(), ok6 = true;
+  for (let g = 0; g < 5; g++) {
+    if (T.peek(b6.circuit, state, []).outputs.join('') !== ref.join('')) ok6 = false;
+    state = T.beat(b6.circuit, state, []).state;
+    ref = ref6(ref);
+  }
+  check('生命 6×6：轻型飞船 5 代与纯 JS 参考一致', ok6);
+  check('生命 6×6：预设 9 个活细胞', F.LIFE_PRESETS_6.lwss.cells.length === 9);
+  check('生命 6×6：滑翔机预设 5 格', F.LIFE_PRESETS_6.glider.cells.length === 5);
+  const b4 = F.buildLifeCircuit(4);
+  check('生命 4×4：仍是 1,600 NAND + 16 LATCH', b4.circuit.nNand === 1600 && b4.circuit.nLatch === 16);
 }
 
 console.log('\n' + lines.join('\n'));
