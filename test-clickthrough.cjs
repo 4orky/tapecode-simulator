@@ -275,6 +275,15 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   for (let i = 0; i < 13; i++) { click(q('#btn-cpu-beat')); await sleep(50); }
   check('CPU 神殿：跑满 16 拍点亮 CPU', /已点亮/.test(q('#cpu-panel').textContent) && save().cpu.lit === true);
   check('CPU 神殿：点亮后厂长履历出现', /厂长履历/.test(q('#cpu-panel').textContent) && !!q('#btn-cpu-share'));
+  // 自动跑（第 34 轮）：开自动 → 时钟前进 → 关自动 → 时钟停住
+  const clockBefore = save().cpu.clock;
+  click(q('#btn-cpu-auto'));
+  await sleep(1400);
+  const clockRunning = save().cpu.clock;
+  check('CPU 神殿：自动跑开，时钟前进 ≥2 拍', clockRunning >= clockBefore + 2, '由 ' + clockBefore + ' → ' + clockRunning);
+  click(q('#btn-cpu-auto'));
+  await sleep(800);
+  check('CPU 神殿：自动跑关，时钟停住', save().cpu.clock === clockRunning, '仍是 ' + save().cpu.clock);
   // 分享文案（第 30 轮）：含游戏链接与图鉴进度（jsdom 无 clipboard，走 fallback 显示全文）
   click(q('#btn-cpu-share'));
   await sleep(100);
