@@ -1003,7 +1003,7 @@
     { id: 'cpu4', name: '4 位 CPU（点亮）', status: 'live', source: 'ECOSYSTEM §3.1 · Behemoth',
       what: '把加法器、寄存器拼成一台 4 位 CPU：时钟一拍一拍走，区块就是时钟。Behemoth 是真的 4 位链上 CPU，约 2,300 门，对标 1971 年 Intel 4004，永久运行、免费调用。',
       unlock: 'cpu' },
-    { id: 'factory', name: '处理器工厂（开厂）', status: 'live', source: 'GAME_CONCEPT §4 第五章 · ECOSYSTEM §3.3',
+    { id: 'factory-open', name: '处理器工厂（开厂）', status: 'live', source: 'GAME_CONCEPT §4 第五章 · ECOSYSTEM §3.3',
       what: '花一笔 BEM 开自己的处理器，自己定晶体管价，别人的电路来流片你就收钱。真实统计（2026-10-23）：X Layer 389 台处理器，111 台 0 产出——开厂不等于赚钱，长尾很残酷。',
       unlock: 'factory' },
     { id: 'token', name: '发币（TapeHub）', status: 'live', source: 'GAME_CONCEPT §4 第五章 · ECOSYSTEM §3.3',
@@ -2526,7 +2526,7 @@
       var ok = codexUnlocked(SAVE, e);
       return '<article class="codex-card' + (ok ? '' : ' locked') + '">' +
         '<h3>' + esc(e.name) + ' ' + (ok ? '<span class="badge st-' + e.status + '">' + e.status + '</span>' : '🔒') + '</h3>' +
-        (ok ? '<p>' + esc(e.text) + '</p><p class="hint">来源：' + esc(e.source) + '</p>'
+        (ok ? '<p>' + esc(e.what) + '</p><p class="hint">来源：' + esc(e.source) + '</p>'
           : '<p class="hint">🔒 ' + esc(e.unlock) + '</p>') +
         '</article>';
     }).join('');

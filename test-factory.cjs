@@ -687,6 +687,17 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
   check('图鉴：新条目都有来源', ['comparator', 'sbox', 'life'].every(id => byId(id).source && byId(id).what.length > 20));
 }
 
+// ---------- 25. 图鉴渲染审计（第 19 轮） ----------
+{
+  const ids = F.CODEX.map(e => e.id);
+  check('图鉴审计：id 全部唯一（曾有两个 factory）', new Set(ids).size === ids.length, '重复：' + ids.filter((x, i) => ids.indexOf(x) !== i).join(','));
+  check('图鉴审计：每条都有非空 what 字段', F.CODEX.every(e => typeof e.what === 'string' && e.what.length > 20));
+  check('图鉴审计：每条都有名字与来源', F.CODEX.every(e => e.name && e.source));
+  check('图鉴审计：解锁条件都在合法集合里',
+    F.CODEX.every(e => ['always', 'prologue', 'ch1', 'tapeout', 'mining', 'test1', 'market', 'cpu', 'factory'].includes(e.unlock)));
+  check('图鉴审计：29 条里能按 id 找到开厂条目', F.CODEX.some(e => e.id === 'factory-open'));
+}
+
 console.log('\n' + lines.join('\n'));
 console.log(`\n合计：${pass} 通过 / ${fail} 失败`);
 process.exit(fail ? 1 : 0);

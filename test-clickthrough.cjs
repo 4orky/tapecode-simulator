@@ -303,6 +303,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await sleep(200);
   check('图鉴：29 条', qa('.codex-card').length === 29);
   check('图鉴：已解锁进度显示', /已解锁/.test(q('#codex-progress').textContent), q('#codex-progress').textContent);
+  // 图鉴渲染审计（第 19 轮）：正文须是条目 what，不能出现 "undefined"
+  check('图鉴：已解锁卡片正文不是 undefined', !/undefined/.test(q('#codex-grid').textContent));
+  check('图鉴：NAND 条目正文在位', /函数完备/.test(q('#codex-grid').textContent));
 
   console.log('\n' + lines.join('\n'));
   console.log(`\n合计：${pass} 通过 / ${fail} 失败`);
