@@ -43,6 +43,12 @@ button.active { background: #1d4ed8; border-color: #3b82f6; color: #fff; }
 .j-step.done { background: #14532d; border-color: #22c55e; color: #bbf7d0; }
 .j-step.now { background: #1d4ed8; border-color: #3b82f6; color: #fff; font-weight: bold; }
 .j-step.later { opacity: 0.55; }
+.j-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
+.j-dot[data-cat="design"] { background: #37d13a; }
+.j-dot[data-cat="mine"] { background: #f5c542; }
+.j-dot[data-cat="trade"] { background: #a78bfa; }
+.j-dot[data-cat="cpu"] { background: #38bdf8; }
+.j-dot[data-cat="cards"] { background: #f472b6; }
 .j-arrow { color: #64748b; }
 .j-note { color: #8fa8c4; font-size: 12px; margin-left: 6px; }
 .town-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }

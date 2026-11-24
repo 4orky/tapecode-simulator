@@ -1212,12 +1212,17 @@
     Array.prototype.forEach.call(wrap.querySelectorAll('.building:not(.locked)'), function (btn) {
       btn.onclick = function () { switchView(btn.getAttribute('data-b')); };
     });
-    // 旅程进度
+    // 旅程进度（第 43 轮：每步一个分类色点，与建筑配色同一套颜色语言）
     var stage = SAVE.cpu.lit ? 7 : (SAVE.visited.cpu ? 6 : (SAVE.visited.market ? 5 : (SAVE.taped.length > 0 ? 4 : (Object.keys(SAVE.passed).length > 0 ? 3 : (SAVE.visited.prologue ? 2 : 1)))));
-    var steps = ['买零件', '画电路', '流片', '挖矿', '花 BEM', '点亮 CPU', '开厂 / 建应用'];
+    var steps = [
+      { name: '买零件', cat: 'trade' }, { name: '画电路', cat: 'design' },
+      { name: '流片', cat: 'design' }, { name: '挖矿', cat: 'mine' },
+      { name: '花 BEM', cat: 'trade' }, { name: '点亮 CPU', cat: 'cpu' },
+      { name: '开厂 / 建应用', cat: 'trade' }
+    ];
     $('journey').innerHTML = steps.map(function (s, i) {
       var cls = i + 1 < stage ? 'done' : (i + 1 === stage ? 'now' : 'later');
-      return '<span class="j-step ' + cls + '">' + s + '</span>' + (i < steps.length - 1 ? '<span class="j-arrow">→</span>' : '');
+      return '<span class="j-step ' + cls + '"><span class="j-dot" data-cat="' + s.cat + '"></span>' + s.name + '</span>' + (i < steps.length - 1 ? '<span class="j-arrow">→</span>' : '');
     }).join('') + '<span class="j-note">（' + (SAVE.processors.length > 0 ? '你已开厂：小镇里多了一栋处理器工厂' : '开厂在小镇的处理器工厂，点亮 CPU 后解锁') + '）</span>';
     // 下一步引导（一次只给一句话，永远有门槛在眼前）
     var ns = nextStep(SAVE);

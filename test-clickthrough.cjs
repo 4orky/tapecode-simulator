@@ -67,6 +67,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   check('无 JS 提示：noscript 在位', !!q('noscript') && /需要 JavaScript/.test(q('noscript').textContent));
   check('HUD：星星满分是 18（6 道题 × 3 星）', q('#res-stars-max').textContent === '18');
   check('小镇：旅程 7 步', qa('.j-step').length === 7);
+  // 旅程色点（第 43 轮）：7 个色点，分类顺序与建筑配色一致
+  check('小镇：旅程 7 步各有分类色点',
+    qa('.j-dot').length === 7 &&
+    qa('.j-dot').map(el => el.getAttribute('data-cat')).join(',') === 'trade,design,design,mine,trade,cpu,trade');
   check('小镇：下一步引导指向任务板（欢迎弹窗已带用户逛过设计台）', /任务板/.test(q('#next-step').textContent));
   check('小镇：里程碑 10 个', qa('.ms-chip').length === 10);
   check('小镇：天际线已画', !!q('.town-skyline svg'));
