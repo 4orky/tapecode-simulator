@@ -403,6 +403,14 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   click(q('#sim-prev'));
   await sleep(500);
   check('模拟器：#1 的上一张到 #10000，输入框同步', q('#sim-token').value === '10000');
+  // 本地目录会话内只拉一次（第 37 轮）：再加载 #1000 本地样本，directory.json 不再多拉
+  const dirBefore = window.__dirFetches;
+  q('#sim-token').value = '1000';
+  click(q('#sim-load-local'));
+  await sleep(2500);
+  check('模拟器：再加载 #1000 本地样本，directory.json 不再多拉',
+    window.__dirFetches === dirBefore && /已加载/.test(q('#sim-status').textContent),
+    '拉了 ' + window.__dirFetches + ' 次，之前 ' + dirBefore + ' 次');
 
   // ---------- 图鉴 ----------
   nav('codex');

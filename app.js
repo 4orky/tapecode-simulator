@@ -367,10 +367,14 @@
 
   /* ---- 本地缓存样本（samples/，2026-11-24 拉取，离线可用） ---- */
   var LOCAL_SAMPLES = [1, 100, 1000, 3500, 9999];
+  // 本地目录会话内只拉一次（第 37 轮，与 factory.js 的 TEST1_DIR_CACHE 同理）：
+  // directory.json 761KB，每次进模拟器都重新下载在手机流量下太浪费。
+  var LOCAL_DIR_CACHE = null;
   async function loadLocalSample(id) {
     // 读 samples/test1-N.tapnet + test1-N-meta.json + directory.json，逐项校验。
     var meta = await fetchJson('samples/test1-' + id + '-meta.json');
-    var dir = await fetchJson('samples/directory.json');
+    if (!LOCAL_DIR_CACHE) LOCAL_DIR_CACHE = await fetchJson('samples/directory.json');
+    var dir = LOCAL_DIR_CACHE;
     var wantMeta = (dir.files && dir.files[String(id)]) || '';
     var metaBytes = await fetchBytes('samples/test1-' + id + '-meta.json');
     if (('0x' + sha256Hex(metaBytes)).toLowerCase() !== wantMeta.toLowerCase())
