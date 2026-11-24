@@ -335,6 +335,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await sleep(500);
   check('模拟器：下一张翻到 #1001，输入框同步', q('#sim-token').value === '1001');
   check('模拟器：#1001 无本地样本，给明错', /加载失败|没有/.test(q('#sim-status').textContent), q('#sim-status').textContent);
+  // 加载失败后仍显示旧电路（第 28 轮）：状态栏必须明说板上是上一张
+  check('模拟器：加载失败时状态栏说明板上仍是上一张', /仍显示上一张 #1000/.test(q('#sim-status').textContent), q('#sim-status').textContent);
   // 边界循环：10000 的下一张回到 1（有本地样本，加载成功）
   q('#sim-token').value = '10000';
   click(q('#sim-next'));

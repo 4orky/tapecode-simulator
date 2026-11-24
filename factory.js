@@ -2473,10 +2473,13 @@
         '网表是随机分配的，不是 PoD 题答案。</p>';
     } catch (e) {
       if (e.unrevealed) {
-        $('sim-status').textContent = '⚠ Test1 #' + id + ' 未开图（黑洞），没有网表。换一个编号试试。';
+        $('sim-status').textContent = '⚠ Test1 #' + id + ' 未开图（黑洞），没有网表。换一个编号试试。' +
+          (SIM.circuit ? '（电路板仍显示上一张 #' + SIM.id + '，不是这张。）' : '');
       } else {
+        // 加载失败时电路板仍显示上一张（如果有），状态栏必须明说，免得人以为板上就是这张
         $('sim-status').textContent = '⚠ 加载失败：' + e.message +
-          '（第 ' + (e.step || '?') + ' 步）。可以试试本地样本，或换一个编号。';
+          '（第 ' + (e.step || '?') + ' 步）。可以试试本地样本，或换一个编号。' +
+          (SIM.circuit ? '（电路板仍显示上一张 #' + SIM.id + '，不是这张。）' : '');
       }
       renderSimSteps();
     }
