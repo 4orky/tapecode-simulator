@@ -38,10 +38,19 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const click = el => el.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   const save = () => JSON.parse(window.localStorage.getItem('tapecode-factory-v1'));
 
+  // ---------- 首次访问欢迎弹窗（第 16 轮） ----------
+  check('欢迎弹窗：首次打开出现', !!q('#modal-root .modal') && /欢迎来到《链上造芯厂》/.test(q('#modal-root').textContent));
+  check('欢迎弹窗：写明不连钱包、不花真钱', /不连钱包、不花真钱/.test(q('#modal-root').textContent));
+  click(q('#btn-welcome-start'));
+  await sleep(200);
+  check('欢迎弹窗：点开始造芯后关闭并进设计台', q('#modal-root').style.display === 'none' && q('#view-prologue').style.display !== 'none');
+  nav('town');
+  await sleep(200);
+
   // ---------- 小镇 ----------
   check('小镇：9 栋建筑', qa('.building').length === 9);
   check('小镇：旅程 7 步', qa('.j-step').length === 7);
-  check('小镇：下一步引导指向设计台', /设计台/.test(q('#next-step').textContent));
+  check('小镇：下一步引导指向任务板（欢迎弹窗已带用户逛过设计台）', /任务板/.test(q('#next-step').textContent));
   check('小镇：里程碑 10 个', qa('.ms-chip').length === 10);
   check('小镇：天际线已画', !!q('.town-skyline svg'));
   check('小镇：建筑有分类配色（矿场 data-cat=mine）', !!q('.building[data-cat="mine"]'));

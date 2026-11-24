@@ -2553,6 +2553,20 @@
       '网表本身不在链上；信任根是链上 baseURI 指纹 + SHA-256 校验链。TapeSend 集成未核实，本游戏不声称已集成。';
     switchView('town');
     setStatus('欢迎来到链上造芯厂：先去设计台认识两块积木。');
+    // 首次访问欢迎弹窗（第 16 轮）：只出现一次。讲清三件事：这是什么、怎么玩、诚实说明。
+    if (!SAVE.visited.welcome) {
+      showModal('<h2>欢迎来到《链上造芯厂》</h2>' +
+        '<p>TapeOut 是把芯片制造搬上区块链：设计电路、流片上链、按设计质量挖 BEM。这款游戏让你 20 分钟玩明白它。</p>' +
+        '<p>路线：设计台认识 NAND 与 LATCH → 任务板接单画电路 → 流片成卡 → 注册矿机每天结算 → 集市花 BEM → 开厂、发币 → 点亮一台属于自己的 4 位 CPU。</p>' +
+        '<p class="hint">不连钱包、不花真钱、不承诺收益。游戏里的 BEM 是游戏币，不是真实 BEM。</p>' +
+        '<div class="toolbar"><button class="btn-primary" id="btn-welcome-start">开始造芯 →</button>' +
+        '<button id="btn-welcome-later">先自己逛逛</button></div>',
+        function () {
+          function done(go) { SAVE.visited.welcome = true; save(); closeModal(); if (go) switchView('prologue'); }
+          $('btn-welcome-start').onclick = function () { done(true); };
+          $('btn-welcome-later').onclick = function () { done(false); };
+        });
+    }
   }
   init();
 })(typeof window !== 'undefined' ? window : globalThis);
