@@ -45,6 +45,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   check('小镇：里程碑 10 个', qa('.ms-chip').length === 10);
   check('小镇：天际线已画', !!q('.town-skyline svg'));
   check('小镇：建筑有分类配色（矿场 data-cat=mine）', !!q('.building[data-cat="mine"]'));
+  // 建筑 SVG 图标（第 15 轮）：9 栋建筑各一个专属描边 SVG
+  check('小镇：9 栋建筑都有 SVG 图标', qa('.b-icon svg').length === 9);
+  check('小镇：图标各不相同', new Set(qa('.b-icon svg').map(el => el.innerHTML)).size === 9);
   // 存档导出/导入（第 12 轮）
   check('存档：小镇有存档面板', !!q('#btn-save-export') && !!q('#btn-save-import'));
   click(q('#btn-save-import'));

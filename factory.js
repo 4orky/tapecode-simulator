@@ -1142,16 +1142,32 @@
   }
 
   /* ================= 小镇地图 ================= */
+  // 建筑图标（第 15 轮）：手绘风描边 SVG，每栋建筑一个专属图形（Shapez 的教训：
+  // 每台机器要有自己的视觉身份）。用 currentColor 着色，跟随分类配色。
+  function bIcon(paths) {
+    return '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>';
+  }
+  var ICONS = {
+    design: bIcon('<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 16L16 8"/><circle cx="8" cy="8" r="1.6"/><circle cx="16" cy="16" r="1.6"/>'),
+    tasks: bIcon('<path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2"/>'),
+    chip: bIcon('<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="10" y="10" width="4" height="4"/><path d="M9 6V3M15 6V3M9 21v-3M15 21v-3M6 9H3M6 15H3M21 9h-3M21 15h-3"/>'),
+    mountain: bIcon('<path d="M3 20l6-11 4 7 3-4 5 8H3z"/><circle cx="17.5" cy="6.5" r="2.5"/>'),
+    store: bIcon('<path d="M4 9l1.2-4h13.6L20 9M4 9h16M4 9v11h16V9M9.5 20v-6h5v6"/>'),
+    cpu: bIcon('<rect x="7" y="7" width="10" height="10" rx="1"/><path d="M10 7V3.5M14 7V3.5M10 20.5V17M14 20.5V17M7 10H3.5M7 14H3.5M20.5 10H17M20.5 14H17"/><path d="M12 10.2l-1.4 2.3h2l-1.2 2"/>'),
+    factory: bIcon('<path d="M3 21V10l5 3.5V10l5 3.5V6h3.5V21H3z"/><path d="M6.5 17.5h1.5M11 17.5h1.5M15.5 17.5H17"/>'),
+    cards: bIcon('<rect x="8" y="3.5" width="12" height="16" rx="2"/><rect x="3.5" y="7.5" width="12" height="12" rx="2"/>'),
+    book: bIcon('<path d="M12 6.5C10 5 7 4.5 4 4.5v14c3 0 6 .5 8 2 2-1.5 5-2 8-2v-14c-3 0-6 .5-8 2z"/><path d="M12 6.5v14"/>')
+  };
   var BUILDINGS = [
-    { id: 'prologue', name: '设计台', desc: '序章 · 两块积木', icon: '▣', cat: 'design', open: function () { return true; }, hint: '认识 NAND 与 LATCH：拨开关，看信号流' },
-    { id: 'ch1', name: '任务板', desc: '第一章 · 接单', icon: '▤', cat: 'design', open: function () { return !!SAVE.visited.prologue; }, lock: '先去设计台逛逛' },
-    { id: 'tapeout', name: '流片厂', desc: '第二章 · 流片', icon: '⬡', cat: 'design', open: function () { return Object.keys(SAVE.passed).length > 0; }, lock: '先通过一道题（任务板）' },
-    { id: 'mining', name: '矿场', desc: '第三章 · 挖 BEM', icon: '⛏', cat: 'mine', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
-    { id: 'market', name: '集市', desc: '第四章 · 花 BEM', icon: '🏪', cat: 'trade', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
-    { id: 'cpu', name: 'CPU 神殿', desc: '终章 · 点亮 CPU', icon: '🖥️', cat: 'cpu', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
-    { id: 'factory', name: '处理器工厂', desc: '第五章 · 开厂', icon: '🏭', cat: 'trade', open: function () { return SAVE.cpu.lit; }, lock: '先点亮 CPU（神殿）' },
-    { id: 'test1', name: '卡片馆', desc: 'Test1 图鉴 · 真实网表', icon: '▦', cat: 'cards', open: function () { return true; }, hint: '5 张真实 Test1 电路卡，可进模拟器玩' },
-    { id: 'codex', name: '图鉴', desc: '生态全景', icon: '▧', cat: 'cards', open: function () { return true; }, hint: '每遇到一个新组件，图鉴亮一条' }
+    { id: 'prologue', name: '设计台', desc: '序章 · 两块积木', icon: ICONS.design, cat: 'design', open: function () { return true; }, hint: '认识 NAND 与 LATCH：拨开关，看信号流' },
+    { id: 'ch1', name: '任务板', desc: '第一章 · 接单', icon: ICONS.tasks, cat: 'design', open: function () { return !!SAVE.visited.prologue; }, lock: '先去设计台逛逛' },
+    { id: 'tapeout', name: '流片厂', desc: '第二章 · 流片', icon: ICONS.chip, cat: 'design', open: function () { return Object.keys(SAVE.passed).length > 0; }, lock: '先通过一道题（任务板）' },
+    { id: 'mining', name: '矿场', desc: '第三章 · 挖 BEM', icon: ICONS.mountain, cat: 'mine', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
+    { id: 'market', name: '集市', desc: '第四章 · 花 BEM', icon: ICONS.store, cat: 'trade', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
+    { id: 'cpu', name: 'CPU 神殿', desc: '终章 · 点亮 CPU', icon: ICONS.cpu, cat: 'cpu', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
+    { id: 'factory', name: '处理器工厂', desc: '第五章 · 开厂', icon: ICONS.factory, cat: 'trade', open: function () { return SAVE.cpu.lit; }, lock: '先点亮 CPU（神殿）' },
+    { id: 'test1', name: '卡片馆', desc: 'Test1 图鉴 · 真实网表', icon: ICONS.cards, cat: 'cards', open: function () { return true; }, hint: '5 张真实 Test1 电路卡，可进模拟器玩' },
+    { id: 'codex', name: '图鉴', desc: '生态全景', icon: ICONS.book, cat: 'cards', open: function () { return true; }, hint: '每遇到一个新组件，图鉴亮一条' }
   ];
   function renderTown() {
     var wrap = $('town-grid');

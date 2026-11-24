@@ -50,7 +50,8 @@ button.active { background: #1d4ed8; border-color: #3b82f6; color: #fff; }
 .building:hover { border-color: #3b82f6; }
 .building.lit { border-color: #f5c542; box-shadow: 0 0 0 1px #f5c542 inset; }
 .building.locked { opacity: 0.55; cursor: not-allowed; }
-.b-icon { font-size: 28px; }
+.b-icon { font-size: 28px; line-height: 1; }
+.b-icon svg { width: 28px; height: 28px; display: block; margin: 0 auto; }
 .b-name { font-size: 17px; font-weight: bold; color: #f1f5f9; }
 .b-desc { font-size: 13px; color: #7fb3e8; }
 .b-hint { font-size: 12px; color: #8fa8c4; }
