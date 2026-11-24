@@ -32,7 +32,7 @@ https://4orky.github.io/tapecode-simulator/
 - 纯静态前端，无后端，不连钱包：`index.html` + `app.js` + `schematic.js` + `factory.js` + `style.css`。
 - 网表格式 `tapnet/1`（TAP-02 草案）：NAND / LATCH / REF 操作码，单拍仿真 O(门数)。
 - 电路图：最长路径分层 + 重心排序布局；线色沿用 Logisim 配色（1 亮绿、0 暗绿）。
-- 回归：`test-regression.cjs`（46/46：5 张真实网表 + 全加器 + popcount8 + toggle + 非法网表拒绝 + 实时链抽查）、`test-factory.cjs`（游戏逻辑 208/208）、`test-clickthrough.cjs`（jsdom 点通 89/89）。
+- 回归：`test-regression.cjs`（46/46：5 张真实网表 + 全加器 + popcount8 + toggle + 非法网表拒绝 + 实时链抽查）、`test-factory.cjs`（游戏逻辑 215/215）、`test-clickthrough.cjs`（jsdom 点通 98/98）。
 
 ## 数据来源
 
