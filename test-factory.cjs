@@ -591,6 +591,25 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
   check('生命 4×4：仍是 1,600 NAND + 16 LATCH', b4.circuit.nNand === 1600 && b4.circuit.nLatch === 16);
 }
 
+// ---------- 21. 存档导出/导入（第 12 轮） ----------
+{
+  const before = F.exportSaveText();
+  const parsed = JSON.parse(before);
+  check('存档导出：是 v=1 的 JSON 对象', parsed.v === 1 && Array.isArray(parsed.taped));
+  check('存档导入：乱码拒绝', F.importSaveText('not json').ok === false);
+  check('存档导入：数组拒绝', F.importSaveText('[]').ok === false);
+  check('存档导入：版本 v=2 拒绝', F.importSaveText('{"v":2}').ok === false);
+  check('存档导入：taped 不是列表拒绝', F.importSaveText('{"taped":"x"}').ok === false);
+  check('存档导入：bem 不是数字拒绝', F.importSaveText('{"bem":"x"}').ok === false);
+  const mod = JSON.parse(before);
+  mod.bem = 42.5;
+  mod.taped = [{ id: 'test-card', sha: '0x00' }];
+  check('存档导入：改过 bem 的存档导入成功', F.importSaveText(JSON.stringify(mod)).ok === true);
+  check('存档导入：导入后 loadSave 读到新值', F.loadSave().bem === 42.5 && F.loadSave().taped.length === 1);
+  check('存档导入：导出也反映新值', JSON.parse(F.exportSaveText()).bem === 42.5);
+  check('存档导入：恢复原存档', F.importSaveText(before).ok === true && F.loadSave().bem === parsed.bem);
+}
+
 console.log('\n' + lines.join('\n'));
 console.log(`\n合计：${pass} 通过 / ${fail} 失败`);
 process.exit(fail ? 1 : 0);

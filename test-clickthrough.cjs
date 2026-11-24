@@ -45,6 +45,20 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   check('小镇：里程碑 10 个', qa('.ms-chip').length === 10);
   check('小镇：天际线已画', !!q('.town-skyline svg'));
   check('小镇：建筑有分类配色（矿场 data-cat=mine）', !!q('.building[data-cat="mine"]'));
+  // 存档导出/导入（第 12 轮）
+  check('存档：小镇有存档面板', !!q('#btn-save-export') && !!q('#btn-save-import'));
+  click(q('#btn-save-import'));
+  await sleep(100);
+  check('存档：点导入先展开输入框', q('#ta-save-import').style.display !== 'none');
+  q('#ta-save-import').value = 'not json';
+  click(q('#btn-save-import'));
+  await sleep(100);
+  check('存档：乱码导入显示失败', /导入失败/.test(q('#save-msg').textContent));
+  // 注意：小镇阶段可能还没触发过 save，localStorage 未必有存档；用导出的当前存档做有效输入
+  q('#ta-save-import').value = window.TapeFactory.exportSaveText();
+  click(q('#btn-save-import'));
+  await sleep(100);
+  check('存档：当前存档导入成功', /导入成功/.test(q('#save-msg').textContent));
   check('小镇：HUD 初始 200 NAND / 0 游戏 BEM',
     q('#res-nand').textContent === '200' && q('#res-bem').textContent === '0.00');
 

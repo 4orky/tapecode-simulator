@@ -1063,6 +1063,7 @@
     launchToken: launchToken, graduateToken: graduateToken, tokenByName: tokenByName,
     nextStep: nextStep, milestones: milestones,
     SAVE_KEY: SAVE_KEY, defaultSave: defaultSave, loadSave: loadSave, storeSave: storeSave,
+    exportSaveText: exportSaveText, importSaveText: importSaveText,
     totalStars: totalStars,
     prologueDraft: prologueDraft,
     CODEX: CODEX, STATUS_LABEL: STATUS_LABEL, codexUnlocked: codexUnlocked,
@@ -1168,7 +1169,54 @@
       ms.map(function (m) {
         return '<span class="ms-chip' + (m.done ? ' done' : '') + '">' + (m.done ? '✓ ' : '○ ') + esc(m.name) + '</span>';
       }).join('') + '</div>';
+    // 存档导出/导入（第 12 轮）：存档只在浏览器本地。换设备（手机 ↔ 电脑）时，
+    // 导出一份 JSON，另一台设备上粘贴导入即可恢复。导入会覆盖当前存档。
+    $('save-box').innerHTML = '<div class="panel"><h3>💾 存档</h3>' +
+      '<p class="hint">存档只存在这台设备的浏览器里。换设备时：先点“导出存档”拿到 JSON，再到另一台设备粘贴“导入存档”。</p>' +
+      '<div class="toolbar"><button id="btn-save-export">⬇ 导出存档</button>' +
+      '<button id="btn-save-import">⬆ 导入存档</button></div>' +
+      '<textarea id="ta-save-import" rows="3" style="width:100%;display:none" placeholder="把导出的 JSON 粘贴到这里，再点一次“导入存档”"></textarea>' +
+      '<p class="hint" id="save-msg"></p></div>';
+    $('btn-save-export').onclick = function () {
+      try {
+        var blob = new Blob([exportSaveText()], { type: 'application/json' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'tapecode-save.json';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+        $('save-msg').textContent = '存档已导出：tapecode-save.json。';
+      } catch (e) {
+        $('save-msg').textContent = '导出失败（这台浏览器不支持文件下载）：' + e.message;
+      }
+    };
+    $('btn-save-import').onclick = function () {
+      var ta = $('ta-save-import');
+      if (ta.style.display === 'none') { ta.style.display = 'block'; ta.focus(); $('save-msg').textContent = '把导出的 JSON 粘贴到上面，再点一次“导入存档”。'; return; }
+      var r = importSaveText(ta.value);
+      if (!r.ok) { $('save-msg').textContent = '导入失败：' + r.reason; return; }
+      ta.value = ''; ta.style.display = 'none';
+      renderTown(); // 先重渲染（它会重建存档面板），再写成功文案，否则文案被冲掉
+      $('save-msg').textContent = '导入成功：存档已恢复。';
+      setStatus('存档已导入恢复。');
+    };
     refreshHud();
+  }
+
+  /* ================= 存档导出/导入（第 12 轮） ================= */
+  // 注意：Node 下模块在界面段之前 return，SAVE 未初始化；所以导出直接读 loadSave()
+  //（浏览器里 SAVE 每次改动都会 storeSave，二者一致）。
+  function exportSaveText() { return JSON.stringify(loadSave(), null, 2); }
+  function importSaveText(text) {
+    var s;
+    try { s = JSON.parse(text); } catch (e) { return { ok: false, reason: '不是有效的 JSON：' + e.message }; }
+    if (!s || typeof s !== 'object' || Array.isArray(s)) return { ok: false, reason: '存档必须是 JSON 对象' };
+    if (s.v !== undefined && s.v !== 1) return { ok: false, reason: '存档版本不对（v=' + s.v + '，只认 v=1）' };
+    if (s.taped !== undefined && !Array.isArray(s.taped)) return { ok: false, reason: '存档里的 taped 不是列表' };
+    if (s.bem !== undefined && typeof s.bem !== 'number') return { ok: false, reason: '存档里的 bem 不是数字' };
+    try { storeSave(s); } catch (e) { return { ok: false, reason: '存档写不进去：' + e.message }; }
+    SAVE = loadSave();
+    return { ok: true };
   }
 
   /* ================= 序章：两块积木 ================= */
