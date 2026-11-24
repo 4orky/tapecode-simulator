@@ -2431,9 +2431,15 @@
     $('test1-note').textContent = '正在核对本地样本与目录登记的 SHA-256……';
     verifyTest1Cache();
   }
+  // 卡片馆样本核对用的目录只在会话内拉一次（第 36 轮）：directory.json 761KB，
+  // 每次进卡片馆都重新下载在手机流量下太浪费；浏览器缓存不可靠，内存缓存最稳。
+  var TEST1_DIR_CACHE = null;
   async function verifyTest1Cache() {
     try {
-      var dir = await (await fetch('samples/directory.json')).json();
+      if (!TEST1_DIR_CACHE) {
+        TEST1_DIR_CACHE = await (await fetch('samples/directory.json')).json();
+      }
+      var dir = TEST1_DIR_CACHE;
       var bad = [];
       for (const c of TEST1_CARDS) {
         var metaBytes = await (await fetch('samples/test1-' + c.id + '-meta.json')).arrayBuffer();

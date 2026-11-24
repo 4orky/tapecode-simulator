@@ -24,6 +24,13 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     beforeParse(window) {
       // jsdom 没有 fetch：把页面内 fetch 桥到 Node 的 fetch（相对路径按页面 URL 解析）
       window.fetch = (u, o) => globalThis.fetch(new URL(u, window.location.href).href, o);
+      // 计数 samples/directory.json 的拉取次数（第 36 轮：卡片馆目录会话内只拉一次）
+      window.__dirFetches = 0;
+      const rawFetch = window.fetch;
+      window.fetch = (u, o) => {
+        if (String(u).includes('samples/directory.json')) window.__dirFetches++;
+        return rawFetch(u, o);
+      };
     }
   });
   const { window } = dom;
@@ -364,6 +371,11 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   nav('test1');
   await sleep(300);
   check('卡片馆：5 张 Test1 卡', qa('.t1-card').length === 5);
+  // 卡片馆目录会话内只拉一次（第 36 轮）：重进卡片馆不再重新下载 761KB
+  const dirFetchesFirst = window.__dirFetches;
+  nav('town'); await sleep(100);
+  nav('test1'); await sleep(300);
+  check('卡片馆：重进不再重新拉 directory.json', window.__dirFetches === dirFetchesFirst, '拉了 ' + window.__dirFetches + ' 次，第一次后 ' + dirFetchesFirst + ' 次');
   check('卡片馆：图片有离线 fallback（onerror）',
     (q('.t1-card img').getAttribute('onerror') || '').indexOf('t1ImgFallback') >= 0);
   click(q('[data-play="1000"]'));
