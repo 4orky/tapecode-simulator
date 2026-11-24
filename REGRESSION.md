@@ -1,8 +1,8 @@
 # 回归报告 — TapeCode 电路模拟器原型
 
 > 本文件是 2026-11-24 晚 P0 原型的历史快照，下面的数字对应当时是对的，不要改写。
-> 当前验收数据（2026-11-25 约 03:4x）：回归 test-regression.cjs 46/46、游戏逻辑
-> test-factory.cjs 205/205、jsdom 点通 test-clickthrough.cjs 88/88；6 道 PoD 真题、
+> 当前验收数据（2026-11-25 约 04:0x）：回归 test-regression.cjs 46/46、游戏逻辑
+> test-factory.cjs 215/215、jsdom 点通 test-clickthrough.cjs 94/94；6 道 PoD 真题、
 > 图鉴 29 条、小镇 9 栋建筑。逐轮记录见 ~/workspace/tapeout-hackathon/IMPROVE_LOG.md。
 
 - 运行时间：2026-11-24 晚（UTC 13:1x）
