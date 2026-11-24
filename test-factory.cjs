@@ -446,6 +446,54 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
     Math.abs(save4.tokens[0].balance - s4.total * 0.1) < 1e-9, '币 + ' + save4.tokens[0].balance.toFixed(4));
 }
 
+// ---------- 16. 生命游戏（第 5 轮：真 tapnet 电路） ----------
+{
+  const lc = F.buildLifeCircuit();
+  check('生命游戏：电路生成', lc.ok && lc.circuit.nNand === 1600 && lc.circuit.nLatch === 16,
+    lc.ok ? '' : lc.reason);
+  check('生命游戏：0 入 16 出', lc.ok && lc.circuit.nIn === 0 && lc.circuit.nOut === 16);
+  check('生命游戏：SHA-256 = 电路字节真哈希',
+    lc.ok && lc.sha === '0x' + T.sha256Hex(lc.bytes) && /^0x[0-9a-f]{64}$/.test(lc.sha));
+  check('生命游戏：预设齐全',
+    F.LIFE_PRESETS.blinker.cells.join(',') === '5,6,7' &&
+    F.LIFE_PRESETS.block.cells.join(',') === '5,6,9,10' &&
+    F.LIFE_PRESETS.glider.cells.join(',') === '1,6,8,9,10');
+
+  // 参考实现（纯 JS 生命游戏，4×4 环面）与电路逐代对拍
+  function refStep(cells) {
+    const out = new Array(16).fill(0);
+    for (let i = 0; i < 16; i++) {
+      const n = F.lifeNeighbors(i).reduce((a, j) => a + cells[j], 0);
+      out[i] = (n === 3 || (cells[i] === 1 && n === 2)) ? 1 : 0;
+    }
+    return out;
+  }
+  function runCircuit(seed, gens) {
+    let state = seed.slice();
+    const seq = [];
+    for (let g = 0; g < gens; g++) {
+      seq.push(T.peek(lc.circuit, state, []).outputs.join(''));
+      state = T.beat(lc.circuit, state, []).state;
+    }
+    return seq;
+  }
+  function runRef(seed, gens) {
+    let ref = seed.slice();
+    const seq = [];
+    for (let g = 0; g < gens; g++) { seq.push(ref.join('')); ref = refStep(ref); }
+    return seq;
+  }
+  const blinker = [0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0];
+  const block = [0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0];
+  const glider = [0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0];
+  check('生命游戏：闪烁器 6 代与参考实现一致（2 代一循环）',
+    runCircuit(blinker, 6).join('|') === runRef(blinker, 6).join('|'));
+  check('生命游戏：方块 6 代稳定不动',
+    runCircuit(block, 6).every(s => s === '0000011001100000'));
+  check('生命游戏：滑翔机 6 代与参考实现一致',
+    runCircuit(glider, 6).join('|') === runRef(glider, 6).join('|'));
+}
+
 console.log('\n' + lines.join('\n'));
 console.log(`\n合计：${pass} 通过 / ${fail} 失败`);
 process.exit(fail ? 1 : 0);

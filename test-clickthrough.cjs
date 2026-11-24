@@ -176,6 +176,21 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   check('CPU 神殿：跑满 16 拍点亮 CPU', /已点亮/.test(q('#cpu-panel').textContent) && save().cpu.lit === true);
   check('CPU 神殿：点亮后厂长履历出现', /厂长履历/.test(q('#cpu-panel').textContent) && !!q('#btn-cpu-share'));
 
+  // ---------- 生命游戏（CPU 的第二种程序） ----------
+  click(q('#btn-mode-life'));
+  await sleep(200);
+  check('生命游戏：4×4 网格 16 格', qa('.life-cell').length === 16);
+  click(q('[data-preset="blinker"]'));
+  await sleep(100);
+  const aliveCells = () => qa('.life-cell.alive').map(el => parseInt(el.getAttribute('data-cell'), 10)).sort((a, b) => a - b).join(',');
+  check('生命游戏：闪烁器预设（5,6,7）', aliveCells() === '5,6,7', aliveCells());
+  click(q('#btn-life-beat'));
+  await sleep(100);
+  check('生命游戏：演化一代变竖三格（2,6,10）', aliveCells() === '2,6,10', aliveCells());
+  click(q('#btn-life-beat'));
+  await sleep(100);
+  check('生命游戏：再演化一代回到横三格，第 2 代', aliveCells() === '5,6,7' && /第 2 代/.test(q('#cpu-panel').textContent));
+
   // ---------- 处理器工厂（第五章：开厂与发币） ----------
   // 攒够 11 游戏 BEM（开厂 5 + mint 1 + 毕业锁 5）
   for (let i = 0; i < 25 && save().bem < 11.5; i++) {

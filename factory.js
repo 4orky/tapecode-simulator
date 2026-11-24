@@ -516,6 +516,80 @@
     return v;
   }
 
+  /* ================= 终章·其二：康威生命游戏（真 tapnet 电路） ================= */
+  // 概念原文终章：“先是计数器，再是康威生命游戏。”生命游戏也是一台真电路：
+  // 4×4 环面（上下左右都连通），16 格每格一个 LATCH 存活/死；下一代由 8 个邻居
+  // 的 NAND 加法树算出来（3 邻居出生、2 邻居存活）。1,600 NAND + 16 LATCH，
+  // 0 入 16 出，输出脚是 16 格状态的复制。生成器先占位 LATCH 再回填 d，
+  // 复制链分两批写（先 16 个 NOT 再 16 个 NOT），保证最后 16 个信号恰好是输出脚。
+  var LIFE_N = 4, LIFE_CELLS = 16;
+  function lifeIndex(r, c) { return ((r + LIFE_N) % LIFE_N) * LIFE_N + ((c + LIFE_N) % LIFE_N); }
+  function lifeNeighbors(i) {
+    var r = Math.floor(i / LIFE_N), c = i % LIFE_N, out = [];
+    for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      out.push(lifeIndex(r + dr, c + dc));
+    }
+    return out;
+  }
+  var LIFE_PRESETS = {
+    blinker: { name: '闪烁器', cells: [5, 6, 7], note: '横三格 → 竖三格，2 代一循环' },
+    block: { name: '方块', cells: [5, 6, 9, 10], note: '2×2 方块，永远不变' },
+    glider: { name: '滑翔机', cells: [1, 6, 8, 9, 10], note: '5 格小飞机，在环面上一直飞' }
+  };
+  function buildLifeCircuit() {
+    var recs = [];
+    var nextSig = 2 + LIFE_CELLS;
+    function N(a, b) { recs.push([0, a, b]); return nextSig++; }
+    function NOT(a) { return N(a, a); }
+    function AND(a, b) { return NOT(N(a, b)); }
+    function OR(a, b) { return N(NOT(a), NOT(b)); }
+    function XOR(a, b) { var t = N(a, b); return N(N(a, t), N(b, t)); }
+    function HA(a, b) { return { s: XOR(a, b), c: AND(a, b) }; }
+    function FA(a, b, cin) {
+      var x = XOR(a, b);
+      return { s: XOR(x, cin), c: OR(AND(a, b), AND(cin, x)) };
+    }
+    var latchIdx = [];
+    for (var i = 0; i < LIFE_CELLS; i++) { latchIdx.push(recs.length); recs.push([1, 0]); }
+    function cellNext(i) {
+      var nb = lifeNeighbors(i).map(function (j) { return 2 + j; });
+      var alive = 2 + i;
+      var f1 = FA(nb[0], nb[1], nb[2]);
+      var f2 = FA(nb[3], nb[4], nb[5]);
+      var h1 = HA(nb[6], nb[7]);
+      var f3 = FA(f1.s, f2.s, h1.s);
+      var f4 = FA(f1.c, f2.c, h1.c);
+      var h2 = HA(f3.c, f4.s);
+      var b0 = f3.s, b1 = h2.s, b2 = XOR(f4.c, h2.c), b3 = AND(f4.c, h2.c);
+      var nb2 = NOT(b2), nb3 = NOT(b3), nb0 = NOT(b0);
+      var eq3 = AND(AND(b0, b1), AND(nb2, nb3));
+      var eq2 = AND(AND(nb0, b1), AND(nb2, nb3));
+      return OR(eq3, AND(alive, eq2));
+    }
+    var nexts = [];
+    for (var k = 0; k < LIFE_CELLS; k++) nexts.push(cellNext(k));
+    nexts.forEach(function (d, i) { recs[latchIdx[i]][1] = d; });
+    var bs = [];
+    for (var m = 0; m < LIFE_CELLS; m++) bs.push(NOT(2 + m));
+    bs.forEach(function (b) { NOT(b); });
+    var total = 16;
+    recs.forEach(function (r) { total += r[0] === 1 ? 4 : 7; });
+    var bytes = new Uint8Array(total);
+    bytes[0] = 0x54; bytes[1] = 0x41; bytes[2] = 0x50; bytes[3] = 0x4e;
+    bytes[4] = 0x45; bytes[5] = 0x54; bytes[6] = 0x01; bytes[7] = 0x00;
+    bytes[11] = 0; bytes[15] = 16; // nIn = 0，nOut = 16
+    var p = 16;
+    recs.forEach(function (r) {
+      bytes[p++] = r[0];
+      for (var j = 1; j < r.length; j++) { u24beInto(bytes, p, r[j]); p += 3; }
+    });
+    var circuit;
+    try { circuit = T.parseTapnet(bytes); }
+    catch (e) { return { ok: false, reason: '生命游戏电路解析失败（不该发生）: ' + e.message }; }
+    return { ok: true, bytes: bytes, circuit: circuit, sha: '0x' + T.sha256Hex(bytes) };
+  }
+
   /* ================= 集市（第四章，P1） ================= */
   // BEM 在这里变成选择权：买零件（新处理器的晶体管只收 BEM，真实规则）、
   // 开 DeWEB 网站（tape:// 地址）、买 TapeRelay 超额存储（真实价 2 GiB/90 天 = 0.2 BEM）、
@@ -651,7 +725,8 @@
       stars: {}, passed: {}, taped: [], miners: [],
       codex: [], visited: {}, prologueDone: {}, drafts: {},
       sites: [], relayGiB: 0, lottery: { day: -1, entered: false, winner: '', won: false, seed: '' },
-      cpu: { powered: false, clock: 0, count: 0, best: 0, lit: false },
+      cpu: { powered: false, clock: 0, count: 0, best: 0, lit: false,
+        life: { gen: 0, cells: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] } },
       processors: [], minedTotal: 0, tokens: []
     };
   }
@@ -942,6 +1017,8 @@
     lotteryDraw: lotteryDraw, lotteryEnter: lotteryEnter,
     marketUnlocked: marketUnlocked, cpuUnlocked: cpuUnlocked,
     buildCounterCircuit: buildCounterCircuit, counterValue: counterValue,
+    LIFE_N: LIFE_N, LIFE_CELLS: LIFE_CELLS, lifeIndex: lifeIndex, lifeNeighbors: lifeNeighbors,
+    LIFE_PRESETS: LIFE_PRESETS, buildLifeCircuit: buildLifeCircuit,
     FACTORY_OPEN_COST_BEM: FACTORY_OPEN_COST_BEM, FACTORY_PRICES: FACTORY_PRICES,
     TOKEN_MINT_COST_BEM: TOKEN_MINT_COST_BEM, TOKEN_GRADUATE_COST_BEM: TOKEN_GRADUATE_COST_BEM,
     TOKEN_GRADUATE_MIN_AGE: TOKEN_GRADUATE_MIN_AGE, TOKEN_MINE_SHARE: TOKEN_MINE_SHARE,
@@ -1907,6 +1984,7 @@
   }
   function cpuStopAuto() {
     if (CPU.timer) { clearInterval(CPU.timer); CPU.timer = null; }
+    if (LIFE.timer) { clearInterval(LIFE.timer); LIFE.timer = null; }
   }
   function renderCpu() {
     var box = $('cpu-panel');
@@ -1943,7 +2021,9 @@
     var c = cpuCircuit();
     var sim = T.peek(c, CPU.state, []);
     var bits = sim.outputs.slice().reverse(); // 显示顺序 q3 q2 q1 q0
-    html += '<div class="panel"><h3>🔌 运行中 · 时钟 ' + SAVE.cpu.clock + ' 拍</h3>' +
+    html += '<div class="toolbar"><button id="btn-mode-counter" class="btn-primary">🔢 计数器</button>' +
+      '<button id="btn-mode-life">🧬 生命游戏</button></div>' +
+      '<div class="panel"><h3>🔌 运行中 · 时钟 ' + SAVE.cpu.clock + ' 拍</h3>' +
       '<div class="cpu-leds">' + bits.map(function (b, i) {
         return '<span class="cpu-led' + (b ? ' on' : '') + '"><span class="cpu-dot"></span><span class="cpu-bit">q' + (3 - i) + ' = ' + b + '</span></span>';
       }).join('') + '</div>' +
@@ -2007,6 +2087,108 @@
       } else {
         $('cpu-share-msg').textContent = text;
       }
+    };
+    var lifeTab = $('btn-mode-life');
+    if (lifeTab) lifeTab.onclick = function () { cpuStopAuto(); renderCpuLife(); };
+    refreshHud();
+  }
+
+  /* ================= 终章·其二：生命游戏界面 ================= */
+  // 生命游戏是 CPU 的第二种程序：同一台 CPU，换一块电路（1,600 NAND + 16 LATCH），
+  // 跑康威生命游戏。点格子摆初始图案，一拍就是一代。老存档没有 cpu.life 字段时补默认。
+  var LIFE = { circuit: null, sha: '', state: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], timer: null };
+  function lifeCircuit() {
+    if (!LIFE.circuit) {
+      var b = buildLifeCircuit();
+      if (!b.ok) return null;
+      LIFE.circuit = b.circuit;
+      LIFE.sha = b.sha;
+    }
+    return LIFE.circuit;
+  }
+  function lifeSaveGuard() {
+    if (!SAVE.cpu.life || !SAVE.cpu.life.cells || SAVE.cpu.life.cells.length !== LIFE_CELLS) {
+      SAVE.cpu.life = { gen: 0, cells: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] };
+    }
+  }
+  function lifeBeatOnce() {
+    var c = lifeCircuit();
+    if (!c) return;
+    var r = T.beat(c, LIFE.state, []);
+    LIFE.state = r.state;
+    lifeSaveGuard();
+    SAVE.cpu.life.gen += 1;
+    SAVE.cpu.life.cells = LIFE.state.slice();
+    save();
+  }
+  function renderCpuLife() {
+    var box = $('cpu-panel');
+    if (!cpuUnlocked(SAVE)) {
+      box.innerHTML = '<p class="hint">🔒 先流片一张电路卡，才能进 CPU 神殿。</p>';
+      return;
+    }
+    lifeSaveGuard();
+    LIFE.state = SAVE.cpu.life.cells.slice();
+    var c = lifeCircuit();
+    var alive = LIFE.state.reduce(function (a, x) { return a + x; }, 0);
+    var html = '<p class="hint">这台 CPU 的第二种程序：康威生命游戏，4×4 环面（上下左右都连通）。规则：3 个邻居出生、2 个邻居存活，其余都死。' +
+      '它也是真电路：1,600 NAND + 16 LATCH，网表 SHA-256 <code>' + (c ? LIFE.sha.slice(0, 18) + '…' : '—') +
+      '</code>，每拍都是 TapeSim 真仿真，不是 JS 算的动画。</p>' +
+      '<div class="toolbar"><button id="btn-mode-counter2">🔢 计数器</button>' +
+      '<button id="btn-mode-life2" class="btn-primary">🧬 生命游戏</button></div>' +
+      '<div class="panel"><h3>🧬 生命游戏 · 第 ' + SAVE.cpu.life.gen + ' 代 · 活细胞 ' + alive + ' / 16</h3>' +
+      '<div class="life-grid">' + LIFE.state.map(function (v, i) {
+        return '<button class="life-cell' + (v ? ' alive' : '') + '" data-cell="' + i + '" aria-label="格子 ' + i + '"></button>';
+      }).join('') + '</div>' +
+      '<p class="hint">点格子摆图案，或用预设：' +
+      Object.keys(LIFE_PRESETS).map(function (k) {
+        return '<button data-preset="' + k + '">' + LIFE_PRESETS[k].name + '</button>';
+      }).join(' ') + '</p>' +
+      '<div class="toolbar">' +
+      '<button class="btn-primary" id="btn-life-beat">▶ 演化一代</button>' +
+      '<button id="btn-life-auto">' + (LIFE.timer ? '⏸ 停止自动' : '▶ 自动演化（约每 0.7 秒一代）') + '</button>' +
+      '<button id="btn-life-clear">清空</button></div>' +
+      '<p class="hint" id="life-preset-note"></p></div>';
+    box.innerHTML = html;
+    Array.prototype.forEach.call(box.querySelectorAll('[data-cell]'), function (btn) {
+      btn.onclick = function () {
+        var i = parseInt(btn.getAttribute('data-cell'), 10);
+        LIFE.state[i] = LIFE.state[i] ? 0 : 1;
+        lifeSaveGuard();
+        SAVE.cpu.life.cells = LIFE.state.slice();
+        save();
+        renderCpuLife();
+      };
+    });
+    Array.prototype.forEach.call(box.querySelectorAll('[data-preset]'), function (btn) {
+      btn.onclick = function () {
+        var p = LIFE_PRESETS[btn.getAttribute('data-preset')];
+        LIFE.state = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        p.cells.forEach(function (i) { LIFE.state[i] = 1; });
+        lifeSaveGuard();
+        SAVE.cpu.life.gen = 0;
+        SAVE.cpu.life.cells = LIFE.state.slice();
+        save();
+        renderCpuLife();
+        $('life-preset-note').textContent = p.name + '：' + p.note + '。';
+      };
+    });
+    $('btn-mode-counter2').onclick = function () { cpuStopAuto(); renderCpu(); };
+    $('btn-life-beat').onclick = function () { lifeBeatOnce(); renderCpuLife(); };
+    $('btn-life-auto').onclick = function () {
+      if (LIFE.timer) { cpuStopAuto(); renderCpuLife(); return; }
+      LIFE.timer = setInterval(function () { lifeBeatOnce(); renderCpuLife(); }, 700);
+      renderCpuLife();
+      setStatus('生命游戏自动演化中：约每 0.7 秒一代。');
+    };
+    $('btn-life-clear').onclick = function () {
+      cpuStopAuto();
+      LIFE.state = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+      lifeSaveGuard();
+      SAVE.cpu.life.gen = 0;
+      SAVE.cpu.life.cells = LIFE.state.slice();
+      save();
+      renderCpuLife();
     };
     refreshHud();
   }
