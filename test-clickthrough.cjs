@@ -192,6 +192,42 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await sleep(100);
   check('抽奖亭：参加后已记录（第 1 天，已参加）',
     save().lottery.day === 1 && save().lottery.entered === true);
+  // 抽奖后重进集市：中奖者区块正常渲染（哈希字段齐全，不崩）
+  nav('town'); await sleep(100);
+  nav('market'); await sleep(200);
+  check('抽奖亭：参加后重进，中奖者区块在位', /中奖者/.test(q('#stall-lottery').textContent));
+  // 攒够钱再走购买流程（第 20 轮补覆盖）：买零件 → 开网站 → 加购存储 → 加密消息
+  for (let i = 0; i < 10 && save().bem < 3.5; i++) {
+    nav('mining'); await sleep(50);
+    click(q('#btn-settle')); await sleep(50);
+  }
+  check('集市：多结算攒够购买钱（≥3.5 游戏 BEM）', save().bem >= 3.5, '当前 ' + save().bem.toFixed(2));
+  nav('market'); await sleep(200);
+  const nandBefore = save().nand, bemBefore = save().bem;
+  click(q('[data-buy="nand10"]'));
+  await sleep(100);
+  check('零件铺：买 10 NAND，晶体管 +10、BEM -1',
+    save().nand === nandBefore + 10 && Math.abs(save().bem - (bemBefore - 1)) < 1e-9,
+    'NAND ' + save().nand + '，BEM ' + save().bem.toFixed(2));
+  q('#site-name').value = '阿杰的芯片铺';
+  click(q('#btn-open-site'));
+  await sleep(100);
+  check('DeWEB 小镇：开店成功，地址 tape://…',
+    save().sites.length === 1 && /^tape:\/\//.test(save().sites[0].addr), save().sites[0] && save().sites[0].addr);
+  click(q('[data-site]'));
+  await sleep(100);
+  check('DeWEB 小镇：进店弹窗显示店名与地址',
+    /阿杰的芯片铺/.test(q('#modal-root').textContent) && /tape:\/\//.test(q('#modal-root').textContent));
+  click(q('#m-close')); await sleep(100);
+  const gibBefore = save().relayGiB;
+  click(q('#btn-relay-buy'));
+  await sleep(100);
+  check('中继站：加购 2 GiB 存储',
+    save().relayGiB === gibBefore + 2, 'relayGiB ' + save().relayGiB);
+  q('#relay-text').value = '今晚八点开图';
+  click(q('#btn-relay-send'));
+  await sleep(100);
+  check('中继站：加密消息演示出密文与指纹', /密文/.test(q('#relay-out').textContent) && /指纹/.test(q('#relay-out').textContent));
 
   // ---------- CPU 神殿（终章：真 4 位计数器） ----------
   nav('cpu');
