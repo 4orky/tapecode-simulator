@@ -2243,7 +2243,8 @@
       var burned = SAVE.taped.reduce(function (a, x) { return a + x.gates; }, 0);
       var text = '我在《链上造芯厂》点亮了一台 4 位 CPU：流片 ' + SAVE.taped.length + ' 张电路、烧了 ' +
         burned + ' 个晶体管、累计挖了 ' + (SAVE.minedTotal || 0).toFixed(2) + ' 游戏 BEM、时钟跑了 ' +
-        SAVE.cpu.clock + ' 拍。TapeOut — From One NAND to a CPU。';
+        SAVE.cpu.clock + ' 拍、图鉴 ' + CODEX.filter(function (e) { return codexUnlocked(SAVE, e); }).length + '/' + CODEX.length +
+        ' 条。免费玩：https://4orky.github.io/tapecode-simulator/ —— TapeOut · From One NAND to a CPU。';
       var done = function () { $('cpu-share-msg').textContent = '✓ 履历已复制，去分享吧。'; };
       if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(done, function () { $('cpu-share-msg').textContent = text; });

@@ -253,6 +253,11 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   for (let i = 0; i < 13; i++) { click(q('#btn-cpu-beat')); await sleep(50); }
   check('CPU 神殿：跑满 16 拍点亮 CPU', /已点亮/.test(q('#cpu-panel').textContent) && save().cpu.lit === true);
   check('CPU 神殿：点亮后厂长履历出现', /厂长履历/.test(q('#cpu-panel').textContent) && !!q('#btn-cpu-share'));
+  // 分享文案（第 30 轮）：含游戏链接与图鉴进度（jsdom 无 clipboard，走 fallback 显示全文）
+  click(q('#btn-cpu-share'));
+  await sleep(100);
+  check('CPU 神殿：分享文案含游戏链接', /4orky\.github\.io\/tapecode-simulator/.test(q('#cpu-share-msg').textContent), q('#cpu-share-msg').textContent);
+  check('CPU 神殿：分享文案含图鉴进度', /图鉴 \d+\/29 条/.test(q('#cpu-share-msg').textContent));
 
   // ---------- 生命游戏（CPU 的第二种程序） ----------
   click(q('#btn-mode-life'));
