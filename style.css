@@ -242,6 +242,10 @@ button:active { transform: scale(0.96); }
 .life-grid { display: grid; grid-template-columns: repeat(4, 56px); gap: 6px; margin: 12px 0; }
 .life-grid.size6 { grid-template-columns: repeat(6, 42px); }
 .life-grid.size6 .life-cell { width: 42px; height: 42px; }
+.ledger { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 14px; }
+.ledger th, .ledger td { border: 1px solid #1e3a5f; padding: 4px 8px; text-align: right; }
+.ledger th:first-child, .ledger td:first-child { text-align: left; }
+.ledger th { background: #16283d; color: #f5c542; }
 .life-cell { width: 56px; height: 56px; border-radius: 8px; border: 2px solid #1e3a5f; background: #0f2033; cursor: pointer; padding: 0; }
 .life-cell.alive { background: #37d13a; border-color: #bbf7d0; box-shadow: 0 0 12px rgba(55, 209, 58, 0.7); }
 

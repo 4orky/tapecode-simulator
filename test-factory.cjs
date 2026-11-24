@@ -610,6 +610,37 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
   check('存档导入：恢复原存档', F.importSaveText(before).ok === true && F.loadSave().bem === parsed.bem);
 }
 
+// ---------- 22. 结算账本（第 13 轮） ----------
+{
+  const save = F.defaultSave();
+  check('账本：新存档账本为空', Array.isArray(save.ledger) && save.ledger.length === 0);
+  save.taped = [{ id: 'c1', name: '4 位加法器', nand: 36, latch: 0 }];
+  save.miners = [{ cardId: 'c1', processor: 'behemoth' }];
+  const s1 = F.settleDay(save);
+  check('账本：结算 1 天后记 1 行', save.ledger.length === 1 && save.ledger[0].day === 1);
+  check('账本：第 1 行矿机收入 = 当日收入', Math.abs(save.ledger[0].mine - s1.total) < 1e-9);
+  check('账本：第 1 行工厂收入 0、自己的币 0', save.ledger[0].factory === 0 && save.ledger[0].token === 0);
+  check('账本：第 1 行余额 = 当前 BEM', Math.abs(save.ledger[0].bem - save.bem) < 1e-9);
+  const s2 = F.settleDay(save);
+  check('账本：结算 2 天后记 2 行', save.ledger.length === 2 && save.ledger[1].day === 2);
+  check('账本：返回值带 tokenGain', s2.tokenGain === 0);
+  // 毕业的币：当日矿机产量 10% 进自己的币余额，账本 token 列记它
+  save.tokens = [{ name: 'TEST', symbol: 'TEST', graduated: true, balance: 0, age: 3 }];
+  const s3 = F.settleDay(save);
+  check('账本：毕业币拿当日产量 10%', Math.abs(s3.tokenGain - s3.total * 0.1) < 1e-9 && Math.abs(save.tokens[0].balance - s3.total * 0.1) < 1e-9);
+  check('账本：第 3 行 token 列 = tokenGain', Math.abs(save.ledger[2].token - s3.tokenGain) < 1e-9);
+  // 只留最近 7 天
+  for (let i = 0; i < 10; i++) F.settleDay(save);
+  check('账本：结算 13 天后只留最近 7 行', save.ledger.length === 7 && save.ledger[0].day === 7 && save.ledger[6].day === 13);
+  // 老存档没有 ledger 字段：settleDay 自己补
+  const old = F.defaultSave();
+  delete old.ledger;
+  old.taped = [{ id: 'c1', name: '4 位加法器', nand: 36, latch: 0 }];
+  old.miners = [{ cardId: 'c1', processor: 'tapeout' }];
+  F.settleDay(old);
+  check('账本：老存档无 ledger 字段也能记', Array.isArray(old.ledger) && old.ledger.length === 1);
+}
+
 console.log('\n' + lines.join('\n'));
 console.log(`\n合计：${pass} 通过 / ${fail} 失败`);
 process.exit(fail ? 1 : 0);

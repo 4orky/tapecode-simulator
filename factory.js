@@ -438,10 +438,15 @@
     });
     save.bem += factoryTotal;
     // 已毕业的币：矿机同时挖你的币（当日矿机 BEM 产量的 10%）
+    var tokenGain = 0;
     save.tokens.forEach(function (t) {
-      if (t.graduated) t.balance += total * TOKEN_MINE_SHARE;
+      if (t.graduated) { t.balance += total * TOKEN_MINE_SHARE; tokenGain += total * TOKEN_MINE_SHARE; }
     });
-    return { day: save.day, total: total, factoryTotal: factoryTotal, totalWeight: save.totalWeight, lines: lines };
+    // 结算账本（第 13 轮）：每天一行，只留最近 7 天——收入看得见，才知道哪条路在赚钱
+    save.ledger = save.ledger || [];
+    save.ledger.push({ day: save.day, mine: total, factory: factoryTotal, token: tokenGain, bem: save.bem });
+    while (save.ledger.length > 7) save.ledger.shift();
+    return { day: save.day, total: total, factoryTotal: factoryTotal, tokenGain: tokenGain, totalWeight: save.totalWeight, lines: lines };
   }
 
   /* ================= 第五章：开厂与发币（P2 起步） ================= */
@@ -763,7 +768,7 @@
       sites: [], relayGiB: 0, lottery: { day: -1, entered: false, winner: '', won: false, seed: '' },
       cpu: { powered: false, clock: 0, count: 0, best: 0, lit: false,
         life: { gen: 0, size: 4, cells: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] } },
-      processors: [], minedTotal: 0, tokens: []
+      processors: [], minedTotal: 0, tokens: [], ledger: []
     };
   }
   function loadSave() {
@@ -1880,6 +1885,20 @@
     }).join('');
     html += '<div class="settle"><button class="btn-primary" id="btn-settle">⏭ 结算一天</button> ' +
       '<span id="settle-result">' + (SAVE.day ? '当前第 ' + SAVE.day + ' 天，累计 ' + SAVE.bem.toFixed(2) + ' 游戏 BEM。' : '还没结算过。') + '</span></div>';
+    // 结算账本：最近 7 天每天一行（第 13 轮）
+    var ledger = SAVE.ledger || [];
+    html += '<section class="panel"><h3>📒 结算账本（最近 7 天）</h3>';
+    if (!ledger.length) {
+      html += '<p class="hint">还没结算过，账本是空的。点「结算一天」，每天的收入会记在这里。</p>';
+    } else {
+      html += '<table class="ledger"><tr><th>天</th><th>矿机</th><th>工厂</th><th>自己的币</th><th>当日总计</th><th>余额</th></tr>' +
+        ledger.map(function (r) {
+          return '<tr><td>第 ' + r.day + ' 天</td><td>' + r.mine.toFixed(2) + '</td><td>' + r.factory.toFixed(2) +
+            '</td><td>' + r.token.toFixed(2) + '</td><td>' + (r.mine + r.factory).toFixed(2) +
+            '</td><td>' + r.bem.toFixed(2) + '</td></tr>';
+        }).join('') + '</table><p class="hint">单位都是游戏 BEM（游戏币，不是真实 BEM）。</p>';
+    }
+    html += '</section>';
     $('mining-list').innerHTML = html;
     Array.prototype.forEach.call($('mining-list').querySelectorAll('[data-reg]'), function (b) {
       b.onclick = function () {

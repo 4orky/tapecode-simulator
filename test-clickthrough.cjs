@@ -165,6 +165,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     afterSettle.day === 1 && Math.abs(afterSettle.bem - expected) < 1e-9,
     '收入 ' + afterSettle.bem.toFixed(4) + '，期望 ' + expected.toFixed(4));
   check('挖矿：结算结果文案含游戏 BEM', /游戏 BEM/.test(q('#settle-result').textContent));
+  // 结算账本（第 13 轮）：结算 1 天后账本有 1 行“第 1 天”
+  check('账本：结算后账本有 1 行', qa('.ledger tr').length === 2 && /第 1 天/.test(q('.ledger').textContent));
+  check('账本：账本余额 = 当前 BEM', q('.ledger').textContent.includes(afterSettle.bem.toFixed(2)));
 
   // ---------- 集市（第四章） ----------
   nav('market');
