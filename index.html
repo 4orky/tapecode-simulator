@@ -23,6 +23,8 @@
     <button data-nav="ch1">任务板</button>
     <button data-nav="tapeout">流片厂</button>
     <button data-nav="mining">矿场</button>
+    <button data-nav="market">集市</button>
+    <button data-nav="cpu">CPU 神殿</button>
     <button data-nav="test1">卡片馆</button>
     <button data-nav="codex">图鉴</button>
   </nav>
@@ -33,8 +35,10 @@
   <section id="view-town" class="view">
     <h2>生态小镇</h2>
     <p>小镇里的每栋建筑都是 TapeOut 生态的一个组件。去过的地方会亮灯。按这个顺序走一圈，你就走完了整个生态：</p>
+    <div id="next-step"></div>
     <div id="journey" class="journey"></div>
     <div id="town-grid" class="town-grid"></div>
+    <div id="milestones"></div>
   </section>
 
   <section id="view-prologue" class="view" style="display:none">
@@ -77,6 +81,22 @@
     <h2>第三章 · 矿场</h2>
     <p>把流片卡注册成矿机，选一台处理器，每天按权重分 BEM。游戏里的 BEM 是<b>游戏币，不是真实 BEM</b>，不能提现、不能兑换。</p>
     <div id="mining-list"></div>
+  </section>
+
+  <section id="view-market" class="view" style="display:none">
+    <h2>第四章 · 集市</h2>
+    <p>挖出来的游戏 BEM 要花出去才有意义。这里的每一分钱都是<b>游戏币，不是真实 BEM</b>，不能提现、不能兑换。真实的 TapeOut 也在愁同一件事：BEM 能花的地方还不多。</p>
+    <p id="market-hold" class="pool"></p>
+    <section class="panel" id="stall-parts"></section>
+    <section class="panel" id="stall-deweb"></section>
+    <section class="panel" id="stall-relay"></section>
+    <section class="panel" id="stall-lottery"></section>
+  </section>
+
+  <section id="view-cpu" class="view" style="display:none">
+    <h2>终章 · 点亮 CPU</h2>
+    <p>把前面几章攒下的电路按图纸拼成一台 4 位 CPU，像 Behemoth 一样上电：时钟一拍一拍走，区块就是时钟。</p>
+    <div id="cpu-panel"></div>
   </section>
 
   <section id="view-test1" class="view" style="display:none">

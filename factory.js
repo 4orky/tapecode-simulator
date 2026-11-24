@@ -403,8 +403,177 @@
       lines.push({ cardName: card.name, processor: PROCESSORS[m.processor].name, weight: w, out: out });
     });
     save.bem += total;
+    save.minedTotal = (save.minedTotal || 0) + total;
     return { day: save.day, total: total, totalWeight: save.totalWeight, lines: lines };
   }
+
+  /* ================= 终章：4 位二进制计数器（真 tapnet 电路） ================= */
+  // 一台 4 位 CPU 的“心跳”：用 NAND + LATCH 搭的真计数器，0 输入、4 输出
+  // （q0 是最低位）。25 NAND + 4 LATCH = 29 门，走同一套 TapeSim 解析 + peek/beat
+  // 真仿真，不做假仿真。记录顺序：4 个 LATCH 在前（d 前向引用后面的 NAND 信号，
+  // 解析器允许 LATCH 前向引用），25 个 NAND 在后，末尾 8 个是复制缓冲——
+  // 最后 4 个门输出 c0..c3 恰好是最后 4 个信号 = 输出脚。
+  // d0 = NOT q0；d1 = q1 XOR q0；d2 = q2 XOR (q0 AND q1)；d3 = q3 XOR (q0 AND q1 AND q2)。
+  function buildCounterCircuit() {
+    var recs = [];
+    function L(d) { recs.push([1, d]); }
+    function N(a, b) { recs.push([0, a, b]); }
+    // NAND 输出信号号（按记录顺序）：6 NOT q0；7-10 xor1；11-12 and01；13-16 xor2；
+    // 17-18 and012；19-22 xor3；23-26 b0..b3；27-30 c0..c3
+    L(6); L(10); L(16); L(22);
+    N(2, 2);
+    N(3, 2); N(3, 7); N(2, 7); N(8, 9);
+    N(2, 3); N(11, 11);
+    N(4, 12); N(4, 13); N(12, 13); N(14, 15);
+    N(12, 4); N(17, 17);
+    N(5, 18); N(5, 19); N(18, 19); N(20, 21);
+    N(2, 2); N(3, 3); N(4, 4); N(5, 5);
+    N(23, 23); N(24, 24); N(25, 25); N(26, 26);
+    var total = 16;
+    recs.forEach(function (r) { total += r[0] === 1 ? 4 : 7; });
+    var bytes = new Uint8Array(total);
+    bytes[0] = 0x54; bytes[1] = 0x41; bytes[2] = 0x50; bytes[3] = 0x4e;
+    bytes[4] = 0x45; bytes[5] = 0x54; bytes[6] = 0x01; bytes[7] = 0x00;
+    bytes[11] = 0; bytes[15] = 4; // nIn = 0，nOut = 4
+    var p = 16;
+    recs.forEach(function (r) {
+      bytes[p++] = r[0];
+      for (var i = 1; i < r.length; i++) { u24beInto(bytes, p, r[i]); p += 3; }
+    });
+    var circuit;
+    try { circuit = T.parseTapnet(bytes); }
+    catch (e) { return { ok: false, reason: '计数器电路解析失败（不该发生）: ' + e.message }; }
+    return { ok: true, bytes: bytes, circuit: circuit, sha: '0x' + T.sha256Hex(bytes) };
+  }
+  // outputs 是 LSB-first（outputs[0] = q0 最低位）→ 十进制计数值
+  function counterValue(outputs) {
+    var v = 0;
+    for (var i = outputs.length - 1; i >= 0; i--) v = v * 2 + (outputs[i] ? 1 : 0);
+    return v;
+  }
+
+  /* ================= 集市（第四章，P1） ================= */
+  // BEM 在这里变成选择权：买零件（新处理器的晶体管只收 BEM，真实规则）、
+  // 开 DeWEB 网站（tape:// 地址）、买 TapeRelay 超额存储（真实价 2 GiB/90 天 = 0.2 BEM）、
+  // 参加 tapeXO 可验证抽奖（真实流程：名单哈希上链 → 种子承诺 → 区块哈希开奖）。
+  // 全部是游戏 BEM（游戏币，不是真实 BEM），不连钱包、不花真钱。
+  var MARKET_ITEMS = [
+    { id: 'nand10', name: '10 个 NAND 晶体管', cost: 1, nand: 10, latch: 0 },
+    { id: 'nand50', name: '50 个 NAND 晶体管', cost: 4, nand: 50, latch: 0 },
+    { id: 'latch5', name: '5 个 LATCH 晶体管', cost: 1, nand: 0, latch: 5 },
+    { id: 'latch20', name: '20 个 LATCH 晶体管', cost: 3, nand: 0, latch: 20 }
+  ];
+  var SITE_COST_BEM = 2;          // 开一家 DeWEB 网站：2 游戏 BEM（游戏设定）
+  var RELAY_FREE_GIB = 5;         // TapeRelay 免费额度：每电路每节点 5 GiB（真实规则）
+  var RELAY_EXTRA_GIB = 2;        // 每次加购 2 GiB
+  var RELAY_EXTRA_COST_BEM = 0.2; // 真实价：2 GiB / 90 天 = 0.2 BEM
+  var LOTTERY_PRIZE_BEM = 2;      // 抽奖亭中奖：+2 游戏 BEM（游戏设定）
+  var LOTTERY_NPCS = ['小矿工阿杰', '电路猎手 Mia', 'Behemoth 粉', '造芯学徒', 'TapeUp 老张', '0x7a3f…c21e', '0xBEEF…09aa'];
+  function marketItemById(id) {
+    for (var i = 0; i < MARKET_ITEMS.length; i++) if (MARKET_ITEMS[i].id === id) return MARKET_ITEMS[i];
+    return null;
+  }
+  function buyParts(save, itemId) {
+    var item = marketItemById(itemId);
+    if (!item) return { ok: false, reason: '没有这个商品' };
+    if (save.bem < item.cost) return { ok: false, reason: '游戏 BEM 不够：要 ' + item.cost + '，你只有 ' + save.bem.toFixed(2) };
+    save.bem -= item.cost;
+    save.nand += item.nand;
+    save.latch += item.latch;
+    return { ok: true, item: item };
+  }
+  function siteSlug(name) {
+    var s = String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return s || 'mysite';
+  }
+  function openSite(save, name) {
+    name = String(name || '').trim();
+    if (!name) return { ok: false, reason: '先给你的网站起个名字' };
+    if (name.length > 20) return { ok: false, reason: '名字太长了，20 个字以内' };
+    if (save.bem < SITE_COST_BEM) return { ok: false, reason: '游戏 BEM 不够：开网站要 ' + SITE_COST_BEM + '，你只有 ' + save.bem.toFixed(2) };
+    var slug = siteSlug(name);
+    var dup = save.sites.some(function (s) { return s.slug === slug; });
+    if (dup) return { ok: false, reason: '这个名字已经开过一家店了，换个名字' };
+    save.bem -= SITE_COST_BEM;
+    var site = { name: name, slug: slug, addr: 'tape://' + slug + '.factory', day: save.day };
+    save.sites.push(site);
+    return { ok: true, site: site };
+  }
+  function relayBuyStorage(save) {
+    if (save.bem < RELAY_EXTRA_COST_BEM) return { ok: false, reason: '游戏 BEM 不够：加 2 GiB 要 ' + RELAY_EXTRA_COST_BEM + '，你只有 ' + save.bem.toFixed(2) };
+    save.bem -= RELAY_EXTRA_COST_BEM;
+    save.relayGiB += RELAY_EXTRA_GIB;
+    return { ok: true, totalGiB: RELAY_FREE_GIB + save.relayGiB };
+  }
+  // 加密消息“外观演示”：真实 TapeRelay 是端到端加密，这里只演示样子——
+  // 明文经简单位移变成密文，并给出 SHA-256 指纹。界面必须标注“演示”。
+  function utf8Bytes(str) {
+    if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(str);
+    var out = [];
+    for (var i = 0; i < str.length; i++) out.push(str.charCodeAt(i) & 0xff);
+    return new Uint8Array(out);
+  }
+  function relayEncryptDemo(text) {
+    text = String(text || '');
+    var cipher = '';
+    for (var i = 0; i < text.length; i++) {
+      var c = (text.charCodeAt(i) ^ 0x5a) & 0xff;
+      cipher += (c < 16 ? '0' : '') + c.toString(16);
+    }
+    return { cipher: cipher, fingerprint: '0x' + T.sha256Hex(utf8Bytes(text)) };
+  }
+  // tapeXO 抽奖：名单哈希上链 → 种子承诺 → 揭示种子 → 区块哈希开奖。
+  // winnerIndex = sha256(种子 + '|' + 名单) 前 8 位 hex % 人数，可重算验证。
+  function lotteryParticipants() { return ['你'].concat(LOTTERY_NPCS); }
+  function lotteryDraw(participants, seed) {
+    var h = T.sha256Hex(utf8Bytes(String(seed) + '|' + participants.join(',')));
+    var n = parseInt(h.slice(0, 8), 16);
+    return { winnerIndex: n % participants.length, winner: participants[n % participants.length], hash: '0x' + h };
+  }
+  function lotteryEnter(save) {
+    if (save.lottery.day === save.day) return { ok: false, reason: '今天已经参加过抽奖了，明天再来（每天限 1 次）' };
+    var parts = lotteryParticipants();
+    var seed = 'tapeXO-day-' + save.day + '-block-' + (100000 + save.day * 137);
+    var listHash = '0x' + T.sha256Hex(utf8Bytes(parts.join(',')));
+    var seedHash = '0x' + T.sha256Hex(utf8Bytes(seed));
+    var draw = lotteryDraw(parts, seed);
+    var won = draw.winnerIndex === 0;
+    if (won) save.bem += LOTTERY_PRIZE_BEM;
+    save.lottery = { day: save.day, entered: true, seed: seed, listHash: listHash, seedHash: seedHash,
+      drawHash: draw.hash, winner: draw.winner, won: won };
+    return { ok: true, won: won, winner: draw.winner, prize: won ? LOTTERY_PRIZE_BEM : 0,
+      listHash: listHash, seedHash: seedHash, drawHash: draw.hash, participants: parts.length };
+  }
+  /* ================= 引导与里程碑（第 3 轮：学 Opus Magnum 与放置类） ================= */
+  // Opus Magnum：指标即时可见，机器本身就是展品；放置类：节奏不能有沙漠——
+  // 玩家永远看得见下一个门槛。nextStep() 按进度只给一句话；milestones() 是 8 个
+  // 可见的里程碑，全部是生态真实步骤（不是凑数的成就）。
+  function nextStep(save) {
+    if (!save.visited.prologue) return { target: 'prologue', text: '先去设计台：拨动开关，认识 NAND 与 LATCH 两块积木。' };
+    if (Object.keys(save.passed).length === 0) return { target: 'ch1', text: '去任务板：搭出全加器，真值表全过就交货。' };
+    if (save.taped.length === 0) return { target: 'tapeout', text: '去流片厂：把通过的电路烧成一张改不了的电路卡。' };
+    if (save.miners.length === 0) return { target: 'mining', text: '去矿场：把电路卡注册成矿机，选 Behemoth ×6 或 TapeOut ×1。' };
+    if (save.day === 0) return { target: 'mining', text: '去矿场点「结算一天」，看你的矿机产出第一笔游戏 BEM。' };
+    if (!save.visited.market) return { target: 'market', text: '去集市：把挖到的游戏 BEM 花出去——买零件、开网站、抽奖。' };
+    if (!save.cpu.lit) return { target: 'cpu', text: '去 CPU 神殿：给 4 位 CPU 上电，跑满 16 拍点亮它。' };
+    if (!save.visited.test1) return { target: 'test1', text: '去卡片馆：玩 5 张真实 Test1 电路卡的网表。' };
+    return { target: 'codex', text: '通关了！去图鉴看看生态全景（24 条），或者继续优化电路、冲击更少门数。' };
+  }
+  function milestones(save) {
+    return [
+      { id: 'm-prologue', name: '认识两块积木', done: Object.keys(save.prologueDone).length >= 4 },
+      { id: 'm-first-pass', name: '第一道 PoD 题通过', done: Object.keys(save.passed).length > 0 },
+      { id: 'm-first-tape', name: '第一张流片卡', done: save.taped.length > 0 },
+      { id: 'm-first-miner', name: '第一台矿机', done: save.miners.length > 0 },
+      { id: 'm-first-bem', name: '第一笔游戏 BEM 到账', done: (save.minedTotal || 0) > 0 },
+      { id: 'm-first-site', name: '第一家 DeWEB 网站', done: save.sites.length > 0 },
+      { id: 'm-first-lottery', name: '第一次参加抽奖', done: !!save.lottery.entered },
+      { id: 'm-cpu-lit', name: '点亮 CPU', done: !!save.cpu.lit }
+    ];
+  }
+
+  function marketUnlocked(save) { return save.taped.length > 0; }
+  function cpuUnlocked(save) { return save.taped.length > 0; }
 
   /* ================= 存档 ================= */
   var SAVE_KEY = 'tapecode-factory-v1';
@@ -413,7 +582,10 @@
     return {
       v: 1, nand: 200, latch: 20, bem: 0, day: 0, totalWeight: 100000,
       stars: {}, passed: {}, taped: [], miners: [],
-      codex: [], visited: {}, prologueDone: {}, drafts: {}
+      codex: [], visited: {}, prologueDone: {}, drafts: {},
+      sites: [], relayGiB: 0, lottery: { day: -1, entered: false, winner: '', won: false, seed: '' },
+      cpu: { powered: false, clock: 0, count: 0, best: 0, lit: false },
+      processors: [], minedTotal: 0
     };
   }
   function loadSave() {
@@ -544,6 +716,12 @@
     { id: 'tap721', name: 'TAP-721', status: 'draft', source: 'ECOSYSTEM §3.1（草案，2026-10-18 起草未合并）',
       what: '电路 NFT 标准草案：NFT 绑定一份真实网表（可下载、可验证）；X Layer 合约能直接调用 NFT 绑定的电路。还是草案，别当成已上线。',
       unlock: 'test1' },
+    { id: 'market', name: '集市', status: 'live', source: 'GAME_CONCEPT §4 第四章',
+      what: 'BEM 的花法：零件铺、DeWEB 小镇、TapeRelay 中继站、tapeXO 抽奖亭。官方自己都在愁 BEM 能花的地方太少——集市就是答案的一半：挖出来的 BEM 要流回生态里，才有价值。',
+      unlock: 'market' },
+    { id: 'cpu4', name: '4 位 CPU（点亮）', status: 'live', source: 'ECOSYSTEM §3.1 · Behemoth',
+      what: '把加法器、寄存器拼成一台 4 位 CPU：时钟一拍一拍走，区块就是时钟。Behemoth 是真的 4 位链上 CPU，约 2,300 门，对标 1971 年 Intel 4004，永久运行、免费调用。',
+      unlock: 'cpu' },
     { id: 'tapesend', name: 'TapeSend', status: 'unverified', source: 'ECOSYSTEM §3.2',
       what: '号称“多链端到端加密消息层”，但除一句话介绍外找不到仓库、文档、API 或演示，很可能已被 TapeRelay 的消息功能取代。本游戏不声称调用它。',
       unlock: 'test1' }
@@ -556,6 +734,8 @@
     if (entry.unlock === 'tapeout') return !!save.visited.tapeout;
     if (entry.unlock === 'mining') return !!save.visited.mining;
     if (entry.unlock === 'test1') return !!save.visited.test1;
+    if (entry.unlock === 'market') return !!save.visited.market;
+    if (entry.unlock === 'cpu') return !!save.visited.cpu;
     return false;
   }
 
@@ -594,6 +774,16 @@
     tapeOutCard: tapeOutCard,
     DAILY_BEM: DAILY_BEM, PROCESSORS: PROCESSORS,
     minerWeight: minerWeight, dailyOutput: dailyOutput, settleDay: settleDay,
+    MARKET_ITEMS: MARKET_ITEMS, SITE_COST_BEM: SITE_COST_BEM,
+    RELAY_FREE_GIB: RELAY_FREE_GIB, RELAY_EXTRA_GIB: RELAY_EXTRA_GIB,
+    RELAY_EXTRA_COST_BEM: RELAY_EXTRA_COST_BEM, LOTTERY_PRIZE_BEM: LOTTERY_PRIZE_BEM,
+    LOTTERY_NPCS: LOTTERY_NPCS, marketItemById: marketItemById, buyParts: buyParts,
+    siteSlug: siteSlug, openSite: openSite, relayBuyStorage: relayBuyStorage,
+    relayEncryptDemo: relayEncryptDemo, lotteryParticipants: lotteryParticipants,
+    lotteryDraw: lotteryDraw, lotteryEnter: lotteryEnter,
+    marketUnlocked: marketUnlocked, cpuUnlocked: cpuUnlocked,
+    buildCounterCircuit: buildCounterCircuit, counterValue: counterValue,
+    nextStep: nextStep, milestones: milestones,
     SAVE_KEY: SAVE_KEY, defaultSave: defaultSave, loadSave: loadSave, storeSave: storeSave,
     totalStars: totalStars,
     prologueDraft: prologueDraft,
@@ -621,8 +811,9 @@
     $('res-stars').textContent = totalStars(SAVE);
   }
 
-  var VIEWS = ['town', 'prologue', 'ch1', 'tapeout', 'mining', 'test1', 'codex', 'sim'];
+  var VIEWS = ['town', 'prologue', 'ch1', 'tapeout', 'mining', 'market', 'cpu', 'test1', 'codex', 'sim'];
   function switchView(name) {
+    if (typeof cpuStopAuto === 'function') cpuStopAuto(); // 离开 CPU 神殿就停掉自动跑
     VIEWS.forEach(function (v) { show($('view-' + v), v === name); });
     Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (b) {
       b.classList.toggle('active', b.getAttribute('data-nav') === name);
@@ -632,6 +823,8 @@
     if (name === 'ch1') { SAVE.visited.ch1 = true; save(); renderCh1(); }
     if (name === 'tapeout') { SAVE.visited.tapeout = true; save(); renderTapeout(); }
     if (name === 'mining') { SAVE.visited.mining = true; save(); renderMining(); }
+    if (name === 'market') { SAVE.visited.market = true; save(); renderMarket(); }
+    if (name === 'cpu') { SAVE.visited.cpu = true; save(); renderCpu(); }
     if (name === 'test1') { SAVE.visited.test1 = true; save(); renderTest1(); }
     if (name === 'codex') renderCodex();
     window.scrollTo(0, 0);
@@ -656,6 +849,8 @@
     { id: 'ch1', name: '任务板', desc: '第一章 · 接单', icon: '▤', open: function () { return !!SAVE.visited.prologue; }, lock: '先去设计台逛逛' },
     { id: 'tapeout', name: '流片厂', desc: '第二章 · 流片', icon: '⬡', open: function () { return Object.keys(SAVE.passed).length > 0; }, lock: '先通过一道题（任务板）' },
     { id: 'mining', name: '矿场', desc: '第三章 · 挖 BEM', icon: '⛏', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
+    { id: 'market', name: '集市', desc: '第四章 · 花 BEM', icon: '🏪', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
+    { id: 'cpu', name: 'CPU 神殿', desc: '终章 · 点亮 CPU', icon: '🖥️', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
     { id: 'test1', name: '卡片馆', desc: 'Test1 图鉴 · 真实网表', icon: '▦', open: function () { return true; }, hint: '5 张真实 Test1 电路卡，可进模拟器玩' },
     { id: 'codex', name: '图鉴', desc: '生态全景', icon: '▧', open: function () { return true; }, hint: '每遇到一个新组件，图鉴亮一条' }
   ];
@@ -675,12 +870,24 @@
       btn.onclick = function () { switchView(btn.getAttribute('data-b')); };
     });
     // 旅程进度
-    var stage = SAVE.taped.length > 0 ? 4 : (Object.keys(SAVE.passed).length > 0 ? 3 : (SAVE.visited.prologue ? 2 : 1));
-    var steps = ['买零件', '画电路', '流片', '挖矿', '花 BEM', '开厂 / 建应用'];
+    var stage = SAVE.cpu.lit ? 7 : (SAVE.visited.cpu ? 6 : (SAVE.visited.market ? 5 : (SAVE.taped.length > 0 ? 4 : (Object.keys(SAVE.passed).length > 0 ? 3 : (SAVE.visited.prologue ? 2 : 1)))));
+    var steps = ['买零件', '画电路', '流片', '挖矿', '花 BEM', '点亮 CPU', '开厂 / 建应用'];
     $('journey').innerHTML = steps.map(function (s, i) {
-      var cls = i + 1 < stage ? 'done' : (i + 1 === stage ? 'now' : (i + 1 > 4 ? 'later' : ''));
+      var cls = i + 1 < stage ? 'done' : (i + 1 === stage ? 'now' : 'later');
       return '<span class="j-step ' + cls + '">' + s + '</span>' + (i < steps.length - 1 ? '<span class="j-arrow">→</span>' : '');
-    }).join('') + '<span class="j-note">（花 BEM 与开厂是 P1，敬请期待）</span>';
+    }).join('') + '<span class="j-note">（开厂 / 建应用是 P2，继续打磨中）</span>';
+    // 下一步引导（一次只给一句话，永远有门槛在眼前）
+    var ns = nextStep(SAVE);
+    $('next-step').innerHTML = '<div class="next-step">👉 下一步：' + esc(ns.text) +
+      ' <button class="btn-primary" id="btn-next-step">去 →</button></div>';
+    $('btn-next-step').onclick = function () { switchView(ns.target); };
+    // 里程碑（8 个生态真实步骤，做完就亮）
+    var ms = milestones(SAVE);
+    var doneCount = ms.filter(function (m) { return m.done; }).length;
+    $('milestones').innerHTML = '<h3>里程碑 ' + doneCount + ' / ' + ms.length + '</h3><div class="ms-list">' +
+      ms.map(function (m) {
+        return '<span class="ms-chip' + (m.done ? ' done' : '') + '">' + (m.done ? '✓ ' : '○ ') + esc(m.name) + '</span>';
+      }).join('') + '</div>';
     refreshHud();
   }
 
@@ -870,9 +1077,7 @@
       b.onclick = function () { B.problemId = b.getAttribute('data-p'); renderCh1(); };
     });
     $('ch1-teach').textContent = prob.teach;
-    $('ch1-meta').innerHTML = '门数标准：3 星 ≤ ' + prob.par + ' 门 · 2 星 ≤ ' + (prob.par + 2) +
-      ' 门 · 通过 ≤ ' + prob.limit + ' 门。晶体管：每放一个 NAND 门花 1 个，删门退回 1 个。' +
-      (SAVE.passed[prob.id] ? ' 已通过：最佳 ' + SAVE.passed[prob.id].gates + ' 门 · ' + SAVE.passed[prob.id].stars + ' 星。' : '');
+    renderCh1Meta();
     drawBuilder();
     drawSimStrip();
     $('tt-panel').innerHTML = '<p class="hint">点「验货」跑完整真值表：' +
@@ -993,6 +1198,7 @@
       tb.innerHTML = '<span class="hint">点一个门选中它（可删除）；拖动门身可移动位置。</span>';
     }
     $('gate-count').textContent = '已用 ' + B.draft.gates.length + ' 门 · 晶体管剩 ' + SAVE.nand + ' 个';
+    renderCh1Meta(); // 星级进度条随门数实时更新
   }
 
   function bindBuilderSvg(box) {
@@ -1202,9 +1408,14 @@
   }
   function renderCh1Meta() {
     var prob = draftProblem(B.draft);
+    var gates = B.draft.gates.length;
+    // 星级进度条：门越少越接近 3 星线（Opus Magnum 式“指标即时可见”）
+    var pct = Math.round(Math.min(100, prob.par / Math.max(gates, 1) * 100));
     $('ch1-meta').innerHTML = '门数标准：3 星 ≤ ' + prob.par + ' 门 · 2 星 ≤ ' + (prob.par + 2) +
       ' 门 · 通过 ≤ ' + prob.limit + ' 门。晶体管：每放一个 NAND 门花 1 个，删门退回 1 个。' +
-      (SAVE.passed[prob.id] ? ' 已通过：最佳 ' + SAVE.passed[prob.id].gates + ' 门 · ' + SAVE.passed[prob.id].stars + ' 星。' : '');
+      (SAVE.passed[prob.id] ? ' 已通过：最佳 ' + SAVE.passed[prob.id].gates + ' 门 · ' + SAVE.passed[prob.id].stars + ' 星。' : '') +
+      '<span class="star-bar" title="当前 ' + gates + ' 门，3 星线 ' + prob.par + ' 门"><span class="star-fill" style="width:' + pct + '%"></span></span>' +
+      '<span class="hint">当前 ' + gates + ' 门 · 3 星线 ' + prob.par + ' 门</span>';
   }
 
   /* ================= 第二章：流片 ================= */
@@ -1372,6 +1583,264 @@
       $('settle-result').textContent = lines + '。合计 ' + r.total.toFixed(2) + ' 游戏 BEM，全网权重涨到 ' + r.totalWeight + '。';
       renderMining();
       setStatus('✓ ' + lines + '。');
+    };
+    refreshHud();
+  }
+
+  /* ================= 第四章：集市 ================= */
+  function renderMarket() {
+    $('market-hold').innerHTML = '你现在有 <b>' + SAVE.bem.toFixed(2) + ' 游戏 BEM</b> · ' + SAVE.nand + ' NAND · ' + SAVE.latch +
+      ' LATCH · 第 ' + SAVE.day + ' 天。花掉的游戏 BEM 不会回来——和真实生态一样，BEM 花出去才是价值。';
+    // 零件铺
+    $('stall-parts').innerHTML = '<h3>🏪 零件铺 · 用游戏 BEM 买晶体管</h3>' +
+      '<p class="hint">真实规则：新处理器的晶体管只收 BEM。买来的零件进你的库存，第一章画电路就能用。</p>' +
+      MARKET_ITEMS.map(function (it) {
+        var afford = SAVE.bem >= it.cost;
+        return '<div class="stall-row"><span><b>' + esc(it.name) + '</b> — ' + it.cost + ' 游戏 BEM</span>' +
+          '<button class="btn-primary" data-buy="' + it.id + '"' + (afford ? '' : ' disabled') + '>买</button></div>';
+      }).join('') +
+      '<p class="hint" id="parts-msg"></p>';
+    Array.prototype.forEach.call($('stall-parts').querySelectorAll('[data-buy]'), function (b) {
+      b.onclick = function () {
+        var r = buyParts(SAVE, b.getAttribute('data-buy'));
+        if (r.ok) {
+          save();
+          setStatus('✓ 买到了 ' + r.item.name + '，花了 ' + r.item.cost + ' 游戏 BEM。');
+          renderMarket(); refreshHud();
+        } else {
+          $('parts-msg').textContent = r.reason;
+          setStatus('买不了：' + r.reason);
+        }
+      };
+    });
+    // DeWEB 小镇
+    var sites = SAVE.sites.length ? SAVE.sites.map(function (s) {
+      return '<div class="stall-row"><span><b>' + esc(s.name) + '</b> · <code>' + s.addr + '</code> · 第 ' + s.day + ' 天开张</span>' +
+        '<button data-site="' + esc(s.slug) + '">进店看看</button></div>';
+    }).join('') : '<p class="hint">你还没开过网站。开一家自己的链上网站，访客能在游戏里真的点开它。</p>';
+    $('stall-deweb').innerHTML = '<h3>🌐 DeWEB 小镇 · 开一家自己的链上网站</h3>' +
+      '<p class="hint">真实规则：DeWEB 网站文件存在电路容器里，地址格式 tape://…，TapeKit 浏览器直读链上文件、逐字节验 SHA-256。开店费 ' + SITE_COST_BEM + ' 游戏 BEM（游戏设定）。</p>' +
+      sites +
+      '<div class="stall-row"><input id="site-name" type="text" maxlength="20" placeholder="给你的网站起个名字，如 阿杰的芯片铺" style="flex:1">' +
+      '<button class="btn-primary" id="btn-open-site">开店（' + SITE_COST_BEM + ' 游戏 BEM）</button></div>' +
+      '<p class="hint" id="site-msg"></p>';
+    $('btn-open-site').onclick = function () {
+      var r = openSite(SAVE, $('site-name').value);
+      if (r.ok) {
+        save();
+        setStatus('✓ 你的网站开张了：' + r.site.addr);
+        renderMarket(); refreshHud();
+      } else {
+        $('site-msg').textContent = r.reason;
+        setStatus('开不了店：' + r.reason);
+      }
+    };
+    Array.prototype.forEach.call($('stall-deweb').querySelectorAll('[data-site]'), function (b) {
+      b.onclick = function () { showSite(b.getAttribute('data-site')); };
+    });
+    // TapeRelay 中继站
+    $('stall-relay').innerHTML = '<h3>📡 中继站 · TapeRelay</h3>' +
+      '<p class="hint">真实规则：每电路每节点 5 GiB 免费；超额存储 2 GiB / 90 天 = 0.2 BEM；消息端到端加密、传送不花 gas，节点看不到内容。你现在有 <b>' +
+      (RELAY_FREE_GIB + SAVE.relayGiB) + ' GiB</b>（免费 5 GiB + 已购 ' + SAVE.relayGiB + ' GiB）。</p>' +
+      '<div class="stall-row"><span>加购 2 GiB 存储（90 天）— 0.2 游戏 BEM</span>' +
+      '<button class="btn-primary" id="btn-relay-buy">加购</button></div>' +
+      '<p class="hint" id="relay-msg"></p>' +
+      '<div class="stall-row"><input id="relay-text" type="text" maxlength="60" placeholder="写一条加密消息，如 今晚八点开图" style="flex:1">' +
+      '<button id="btn-relay-send">🔒 加密发送（演示）</button></div>' +
+      '<p class="hint">演示：真实 TapeRelay 是端到端加密，这里只演示“密文 + 指纹”的样子；传送不花 gas（游戏里也不花）。</p>' +
+      '<p class="hint" id="relay-out"></p>';
+    $('btn-relay-buy').onclick = function () {
+      var r = relayBuyStorage(SAVE);
+      if (r.ok) {
+        save();
+        setStatus('✓ 已加购 2 GiB，现在共 ' + r.totalGiB + ' GiB。');
+        renderMarket(); refreshHud();
+      } else {
+        $('relay-msg').textContent = r.reason;
+        setStatus('加购失败：' + r.reason);
+      }
+    };
+    $('btn-relay-send').onclick = function () {
+      var txt = $('relay-text').value.trim();
+      if (!txt) { $('relay-out').textContent = '先写点什么再发送。'; return; }
+      var d = relayEncryptDemo(txt);
+      $('relay-out').innerHTML = '✓ 已发送（演示）：密文 <code>' + d.cipher.slice(0, 48) + (d.cipher.length > 48 ? '…' : '') + '</code><br>指纹 <code>' +
+        d.fingerprint.slice(0, 22) + '…</code> · 中继节点看不到原文 · 传送 0 gas';
+      setStatus('✓ 加密消息已发送（演示）。节点只能看到密文，看不到你写了什么。');
+    };
+    // tapeXO 抽奖亭
+    var lot = SAVE.lottery;
+    var lotHtml = '<h3>🎰 抽奖亭 · tapeXO 可验证抽奖</h3>' +
+      '<p class="hint">真实规则：参与名单事前固定、哈希上链；用承诺的随机种子哈希 → 延迟揭示种子 → 之后区块哈希算中奖者，任何人都能重算验证。参加免费（真实 tapeXO 也是免费参加），中奖 +2 游戏 BEM，每天限 1 次。</p>';
+    if (lot.day === SAVE.day && lot.entered) {
+      lotHtml += '<p>今天已经参加过了。中奖者：<b>' + esc(lot.winner) + '</b>' + (lot.won ? ' —— 就是你！+2 游戏 BEM 已到账。' : '（不是你，明天再来）') + '</p>' +
+        '<p class="hint">名单哈希 <code>' + lot.listHash.slice(0, 22) + '…</code> · 种子承诺 <code>' + lot.seedHash.slice(0, 22) + '…</code> · 开奖哈希 <code>' + lot.drawHash.slice(0, 22) + '…</code><br>' +
+        '验证方法：开奖哈希 = SHA-256(种子 | 参与名单)，前 8 位 hex 取模得中奖序号——名单共 ' + lotteryParticipants().length + ' 人。</p>';
+    } else {
+      lotHtml += '<p>今天还没参加。参与者：你 + 7 位小镇居民（名单赛前固定）。</p>' +
+        '<button class="btn-primary" id="btn-lottery">免费参加今天的抽奖</button> <span id="lottery-result" class="hint"></span>';
+    }
+    $('stall-lottery').innerHTML = lotHtml;
+    var lb = $('btn-lottery');
+    if (lb) lb.onclick = function () {
+      var r = lotteryEnter(SAVE);
+      if (!r.ok) { $('lottery-result').textContent = r.reason; setStatus(r.reason); return; }
+      save();
+      renderMarket(); refreshHud();
+      setStatus(r.won ? '🎉 中奖了！就是你，+2 游戏 BEM。' : '开奖了，中奖者是 ' + r.winner + '（不是你，明天再来）。');
+    };
+    refreshHud();
+  }
+  function showSite(slug) {
+    var s = SAVE.sites.find(function (x) { return x.slug === slug; });
+    if (!s) return;
+    var cards = SAVE.taped.length ? SAVE.taped.map(function (c) {
+      return '<li>' + esc(c.name) + ' · ' + c.gates + ' NAND · ★'.repeat(c.stars) + '☆'.repeat(3 - c.stars) + '</li>';
+    }).join('') : '<li>还没流片过任何电路——先去流片厂流一片，网站就有货了。</li>';
+    showModal('<h3>🌐 ' + esc(s.name) + '</h3><p><code>' + s.addr + '</code> · 第 ' + s.day + ' 天开张</p>' +
+      '<p>这是你在 DeWEB 小镇开的链上网站（游戏内演示）：卖的是你自己流片的电路卡。</p>' +
+      '<ul>' + cards + '</ul>' +
+      '<p class="hint">真实 DeWEB：网站文件存在电路容器里，TapeKit 浏览器直读链上文件、逐字节验 SHA-256。这里是游戏内的样子，不连真实链。</p>' +
+      '<div class="modal-btns"><button id="m-close">关闭</button></div>',
+      function () { $('m-close').onclick = closeModal; });
+  }
+
+  /* ================= 终章：点亮 CPU ================= */
+  // 你的 CPU 是一台真电路：buildCounterCircuit() 的 4 位计数器（25 NAND + 4 LATCH），
+  // 走 TapeSim peek/beat 真仿真。时钟一拍 = 一个区块（Behemoth 的时钟就是区块生产，
+  // 约 2.22 Hz）；跑满 16 拍（0→15 完整数一圈）即点亮。
+  // 诚实说明：你的计数器是 29 门的演示规模；真正的 Behemoth 约 2,300 门。
+  var CPU = { circuit: null, sha: '', state: [0, 0, 0, 0], timer: null };
+  function cpuCircuit() {
+    if (!CPU.circuit) {
+      var b = buildCounterCircuit();
+      if (!b.ok) return null;
+      CPU.circuit = b.circuit;
+      CPU.sha = b.sha;
+    }
+    return CPU.circuit;
+  }
+  function cpuStateFromCount(count) {
+    return [count & 1, (count >> 1) & 1, (count >> 2) & 1, (count >> 3) & 1];
+  }
+  function cpuCurrentCount() {
+    var c = cpuCircuit();
+    if (!c) return 0;
+    return counterValue(T.peek(c, CPU.state, []).outputs);
+  }
+  function cpuBeatOnce() {
+    var c = cpuCircuit();
+    if (!c) return;
+    var r = T.beat(c, CPU.state, []);
+    CPU.state = r.state;
+    SAVE.cpu.clock += 1;
+    SAVE.cpu.count = cpuCurrentCount();
+    if (SAVE.cpu.count > SAVE.cpu.best) SAVE.cpu.best = SAVE.cpu.count;
+    if (SAVE.cpu.clock >= 16) SAVE.cpu.lit = true;
+    save();
+  }
+  function cpuStopAuto() {
+    if (CPU.timer) { clearInterval(CPU.timer); CPU.timer = null; }
+  }
+  function renderCpu() {
+    var box = $('cpu-panel');
+    if (!cpuUnlocked(SAVE)) {
+      box.innerHTML = '<p class="hint">🔒 先流片一张电路卡，才能进 CPU 神殿——CPU 是用你前面攒下的电路拼起来的。</p>';
+      return;
+    }
+    var aluCard = null;
+    SAVE.taped.forEach(function (c) {
+      if (!aluCard && (c.problemId === 'adder4' || c.problemId === 'fa')) aluCard = c;
+    });
+    var aluLine = aluCard
+      ? 'ALU 用的是你流片的《' + esc(aluCard.name) + '》（' + aluCard.gates + ' NAND，★'.repeat(aluCard.stars) + '☆'.repeat(3 - aluCard.stars) + '）。'
+      : 'ALU 用厂里标准全加器图纸（你还没流片过加法器——去任务板做一道，CPU 就用上你自己的电路）。';
+    var html = '<p>' + aluLine + '</p>' +
+      '<p class="hint">这台 CPU 的核心是一台真电路：4 位二进制计数器，25 NAND + 4 LATCH，网表 SHA-256 <code>' +
+      (cpuCircuit() ? CPU.sha.slice(0, 18) + '…' : '—') + '</code>。时钟一拍 = 一个区块；跑满 16 拍（0→15 数一圈）即点亮。' +
+      '诚实说明：你的计数器是 29 门的演示规模；真正的 Behemoth 约 2,300 门、对标 Intel 4004。</p>';
+    if (!SAVE.cpu.powered) {
+      html += '<div class="panel"><h3>⚡ 上电</h3><p>点“上电”，时钟开始一拍一拍走，计数器从 0 数到 15，再回到 0——像 Behemoth 一样，只要链还在，它就一直跑，没人能关掉它。</p>' +
+        '<button class="btn-primary" id="btn-cpu-power">⚡ 上电，点亮 CPU</button></div>';
+      box.innerHTML = html;
+      $('btn-cpu-power').onclick = function () {
+        SAVE.cpu.powered = true;
+        SAVE.cpu.clock = 0; SAVE.cpu.count = 0; SAVE.cpu.best = 0; SAVE.cpu.lit = false;
+        CPU.state = [0, 0, 0, 0];
+        save();
+        renderCpu();
+        setStatus('✓ CPU 已上电。点“运行一拍”，看计数器走起来。');
+      };
+      return;
+    }
+    CPU.state = cpuStateFromCount(SAVE.cpu.count);
+    var c = cpuCircuit();
+    var sim = T.peek(c, CPU.state, []);
+    var bits = sim.outputs.slice().reverse(); // 显示顺序 q3 q2 q1 q0
+    html += '<div class="panel"><h3>🔌 运行中 · 时钟 ' + SAVE.cpu.clock + ' 拍</h3>' +
+      '<div class="cpu-leds">' + bits.map(function (b, i) {
+        return '<span class="cpu-led' + (b ? ' on' : '') + '"><span class="cpu-dot"></span><span class="cpu-bit">q' + (3 - i) + ' = ' + b + '</span></span>';
+      }).join('') + '</div>' +
+      '<p class="cpu-count">计数 = <b>' + SAVE.cpu.count + '</b>（二进制 ' + bits.join('') + '）· 最高数到过 ' + SAVE.cpu.best + '</p>' +
+      '<p>点亮进度：' + Math.min(SAVE.cpu.clock, 16) + ' / 16 拍' + (SAVE.cpu.lit ? ' —— <b class="pass">✓ 已点亮！</b>' : '') + '</p>' +
+      '<div class="toolbar">' +
+      '<button class="btn-primary" id="btn-cpu-beat">▶ 运行一拍</button>' +
+      '<button id="btn-cpu-auto">' + (CPU.timer ? '⏸ 停止自动' : '▶ 自动跑（约每 0.6 秒一拍）') + '</button>' +
+      '<button id="btn-cpu-reset">复位（回到 0）</button>' +
+      '<button id="btn-cpu-off">断电</button></div>' +
+      '<div id="cpu-board" class="diagram"></div>' +
+      '<p class="hint">下面是这台 CPU 的真实原理图（29 门，信号实时流动）：D 形门是 NAND，方框是 LATCH（记住一位）。</p></div>';
+    if (SAVE.cpu.lit) {
+      var burned = SAVE.taped.reduce(function (a, x) { return a + x.gates; }, 0);
+      html += '<div class="panel"><h3>🏆 厂长履历 · 通关结算</h3>' +
+        '<p>你的 CPU 在跑。只要链还在，它就一直跑，没人能关掉它。</p>' +
+        '<ul><li>流片电路卡：' + SAVE.taped.length + ' 张</li>' +
+        '<li>烧掉的晶体管：' + burned + ' 个</li>' +
+        '<li>累计挖到游戏 BEM：' + (SAVE.minedTotal || 0).toFixed(2) + '（游戏币，不是真实 BEM）</li>' +
+        '<li>收藏 Test1 图鉴：已逛卡片馆 ' + (SAVE.visited.test1 ? '✓' : '还没去') + '</li>' +
+        '<li>图鉴解锁：' + CODEX.filter(function (e) { return codexUnlocked(SAVE, e); }).length + ' / ' + CODEX.length + ' 条</li>' +
+        '<li>CPU 时钟：' + SAVE.cpu.clock + ' 拍</li></ul>' +
+        '<button class="btn-primary" id="btn-cpu-share">📋 复制履历去分享</button> <span id="cpu-share-msg" class="hint"></span></div>';
+    }
+    box.innerHTML = html;
+    var board = $('cpu-board');
+    if (board && c) {
+      var layout = T.layoutCircuit(c);
+      if (layout.tooBig) S.renderGateTable(board, c, sim.signals);
+      else S.renderSchematic(board, c, layout, sim.signals, { flow: true });
+    }
+    $('btn-cpu-beat').onclick = function () { cpuBeatOnce(); renderCpu(); };
+    $('btn-cpu-auto').onclick = function () {
+      if (CPU.timer) { cpuStopAuto(); renderCpu(); return; }
+      CPU.timer = setInterval(function () { cpuBeatOnce(); renderCpu(); }, 600);
+      renderCpu();
+      setStatus('自动跑起来了：约每 0.6 秒一拍（真实 Behemoth 约 2.22 Hz）。');
+    };
+    $('btn-cpu-reset').onclick = function () {
+      cpuStopAuto();
+      CPU.state = [0, 0, 0, 0];
+      SAVE.cpu.clock = 0; SAVE.cpu.count = 0; SAVE.cpu.best = 0; SAVE.cpu.lit = false;
+      save(); renderCpu();
+      setStatus('CPU 已复位，计数回到 0。');
+    };
+    $('btn-cpu-off').onclick = function () {
+      cpuStopAuto();
+      SAVE.cpu.powered = false;
+      save(); renderCpu();
+      setStatus('CPU 已断电。再上电时从 0 重新数。');
+    };
+    var shareBtn = $('btn-cpu-share');
+    if (shareBtn) shareBtn.onclick = function () {
+      var burned = SAVE.taped.reduce(function (a, x) { return a + x.gates; }, 0);
+      var text = '我在《链上造芯厂》点亮了一台 4 位 CPU：流片 ' + SAVE.taped.length + ' 张电路、烧了 ' +
+        burned + ' 个晶体管、累计挖了 ' + (SAVE.minedTotal || 0).toFixed(2) + ' 游戏 BEM、时钟跑了 ' +
+        SAVE.cpu.clock + ' 拍。TapeOut — From One NAND to a CPU。';
+      var done = function () { $('cpu-share-msg').textContent = '✓ 履历已复制，去分享吧。'; };
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { $('cpu-share-msg').textContent = text; });
+      } else {
+        $('cpu-share-msg').textContent = text;
+      }
     };
     refreshHud();
   }

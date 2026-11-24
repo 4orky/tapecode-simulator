@@ -1,6 +1,6 @@
-# TapeCode 电路模拟器
+# 链上造芯厂 — TapeOut · From One NAND to a CPU
 
-交互式模拟器：加载 TapeCode-Test1 NFT 的真实电路网表（`tapnet/1`），可视化电路并做交互式仿真。
+《链上造芯厂》：玩着就明白 TapeOut 是干什么的——从一块 NAND 门起步，买零件、画电路、流片成链上电路 NFT、按设计质量挖 BEM、把 BEM 花回生态里，最后点亮一台属于自己的 4 位 CPU。
 
 参赛作品：X Layer × TapeOut Accelerate 黑客松（X Layer TapeOut Accelerate）。
 
@@ -10,6 +10,16 @@ https://4orky.github.io/tapecode-simulator/
 
 ## 怎么玩
 
+- 小镇地图是生态关系图：设计台（序章）→ 任务板（PoD 真题）→ 流片厂 → 矿场 → 集市 → CPU 神殿，一路玩下来就是 TapeOut 的真实流程。
+- 任务板：PoD 题库真题（全加器、4 位加法器、多数表决器），迷你画布拖 NAND 门、真值表验货，门越少星越多。
+- 流片：真值表全过的电路烧成电路 NFT 卡（卡面是网表字节的真实 SHA-256），草稿烧掉、改不了。
+- 矿场：电路卡注册成矿机，Behemoth ×6 / TapeOut ×1，每天按权重分 7,200 游戏 BEM（游戏币，不是真实 BEM）。
+- 集市：花游戏 BEM——零件铺、DeWEB 小镇开网站（tape://…）、TapeRelay 中继站（免费 5 GiB，超额 2 GiB/90 天 = 0.2 BEM）、tapeXO 可验证抽奖（名单哈希上链 → 种子承诺 → 区块哈希开奖）。
+- CPU 神殿：把攒下的电路拼成 4 位 CPU 上电——核心是一台真 tapnet 电路（25 NAND + 4 LATCH 的二进制计数器），时钟一拍一拍走，跑满 16 拍点亮。
+- 卡片馆：5 张真实 Test1 电路卡（#1 / #100 / #1000 / #3500 / #9999），点一张进模拟器亲手拨它的输入。
+
+## 模拟器（真实网表）
+
 - 输入任意 Test1 编号（1–10000），点「从链上加载」：应用从链上读 Test1 合约的 `baseURI()` 开始，按 9 步逐项 SHA-256 校验取回网表，信任根在链上，不硬编码目录指纹。
 - 点输入引脚拨动 0/1，信号即时刷新（peek，不推进时钟）；点「运行一拍（beat）」推进一拍。
 - 没网或目录不可用时自动降级，用本地缓存样本（`samples/`，#1 / #100 / #1000 / #3500 / #9999，均为真实拉取的网表）。
@@ -17,10 +27,10 @@ https://4orky.github.io/tapecode-simulator/
 
 ## 技术
 
-- 纯静态前端，无后端，不连钱包：`index.html` + `app.js` + `style.css`。
+- 纯静态前端，无后端，不连钱包：`index.html` + `app.js` + `schematic.js` + `factory.js` + `style.css`。
 - 网表格式 `tapnet/1`（TAP-02 草案）：NAND / LATCH / REF 操作码，单拍仿真 O(门数)。
 - 电路图：最长路径分层 + 重心排序布局；线色沿用 Logisim 配色（1 亮绿、0 暗绿）。
-- 回归：`REGRESSION.md`（46/46 通过：5 张真实网表 + 全加器 + popcount8 + toggle + 非法网表拒绝），回归脚本 `test-regression.cjs`。
+- 回归：`test-regression.cjs`（46/46：5 张真实网表 + 全加器 + popcount8 + toggle + 非法网表拒绝 + 实时链抽查）、`test-factory.cjs`（游戏逻辑 110/110）、`test-clickthrough.cjs`（jsdom 点通 44/44）。
 
 ## 数据来源
 
@@ -28,3 +38,7 @@ https://4orky.github.io/tapecode-simulator/
 - 只读查看页：https://nft.taperelay.com/tct1/view/
 - 网表格式规范 TAP-02：https://github.com/TapeOutProtocol/TAPs
 - 网表数据本身不在链上，信任链是链上 `baseURI()` 目录指纹 + 每步 SHA-256 校验。
+
+## 诚实说明
+
+游戏里的 BEM 是游戏币，不是真实 BEM，不能提现、不能兑换。Test1 网表是随机分配的收藏品，不是 PoD 题的标准答案。真实数字标有快照时间（2026-11-24）。

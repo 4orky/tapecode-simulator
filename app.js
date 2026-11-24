@@ -209,11 +209,14 @@
     return s;
   }
   async function ethCall(rpc, to, data) {
-    var res = await fetch(rpc, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to: to, data: data }, 'latest'] })
-    });
+    var res = await Promise.race([
+      fetch(rpc, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to: to, data: data }, 'latest'] })
+      }),
+      new Promise(function (_, rej) { setTimeout(function () { rej(new Error('RPC 请求超时 20000ms')); }, 20000); })
+    ]);
     if (!res.ok) throw new Error('RPC HTTP ' + res.status);
     var j = await res.json();
     if (j.error) throw new Error('RPC 错误：' + JSON.stringify(j.error));

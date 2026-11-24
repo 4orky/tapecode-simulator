@@ -39,8 +39,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const save = () => JSON.parse(window.localStorage.getItem('tapecode-factory-v1'));
 
   // ---------- 小镇 ----------
-  check('小镇：6 栋建筑', qa('.building').length === 6);
-  check('小镇：旅程 6 步', qa('.j-step').length === 6);
+  check('小镇：8 栋建筑', qa('.building').length === 8);
+  check('小镇：旅程 7 步', qa('.j-step').length === 7);
+  check('小镇：下一步引导指向设计台', /设计台/.test(q('#next-step').textContent));
+  check('小镇：里程碑 8 个', qa('.ms-chip').length === 8);
   check('小镇：HUD 初始 200 NAND / 0 游戏 BEM',
     q('#res-nand').textContent === '200' && q('#res-bem').textContent === '0.00');
 
@@ -148,6 +150,32 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     '收入 ' + afterSettle.bem.toFixed(4) + '，期望 ' + expected.toFixed(4));
   check('挖矿：结算结果文案含游戏 BEM', /游戏 BEM/.test(q('#settle-result').textContent));
 
+  // ---------- 集市（第四章） ----------
+  nav('market');
+  await sleep(200);
+  check('集市：4 个摊位都在',
+    !!q('#stall-parts') && !!q('#stall-deweb') && !!q('#stall-relay') && !!q('#stall-lottery'));
+  check('集市：BEM 不够时买按钮禁用（0.64 BEM 买不起 1 BEM 的货）',
+    q('[data-buy="nand10"]').disabled === true);
+  click(q('#btn-lottery'));
+  await sleep(100);
+  check('抽奖亭：参加后已记录（第 1 天，已参加）',
+    save().lottery.day === 1 && save().lottery.entered === true);
+
+  // ---------- CPU 神殿（终章：真 4 位计数器） ----------
+  nav('cpu');
+  await sleep(200);
+  check('CPU 神殿：视图已出现', q('#view-cpu').style.display !== 'none');
+  check('CPU 神殿：未上电时有上电按钮', !!q('#btn-cpu-power'));
+  click(q('#btn-cpu-power'));
+  await sleep(200);
+  check('CPU 神殿：上电后原理图已画（29 门真电路）', !!q('#cpu-board svg'));
+  for (let i = 0; i < 3; i++) { click(q('#btn-cpu-beat')); await sleep(50); }
+  check('CPU 神殿：跑 3 拍计数 = 3', /计数 = 3/.test(q('#cpu-panel').textContent), q('.cpu-count') && q('.cpu-count').textContent);
+  for (let i = 0; i < 13; i++) { click(q('#btn-cpu-beat')); await sleep(50); }
+  check('CPU 神殿：跑满 16 拍点亮 CPU', /已点亮/.test(q('#cpu-panel').textContent) && save().cpu.lit === true);
+  check('CPU 神殿：点亮后厂长履历出现', /厂长履历/.test(q('#cpu-panel').textContent) && !!q('#btn-cpu-share'));
+
   // ---------- 卡片馆 + 模拟器（本地样本） ----------
   nav('test1');
   await sleep(300);
@@ -165,7 +193,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // ---------- 图鉴 ----------
   nav('codex');
   await sleep(200);
-  check('图鉴：22 条', qa('.codex-card').length === 22);
+  check('图鉴：24 条', qa('.codex-card').length === 24);
   check('图鉴：已解锁进度显示', /已解锁/.test(q('#codex-progress').textContent), q('#codex-progress').textContent);
 
   console.log('\n' + lines.join('\n'));

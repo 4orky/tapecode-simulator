@@ -254,8 +254,138 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
   check('存档默认：200 NAND / 20 LATCH / 0 BEM',
     s.nand === 200 && s.latch === 20 && s.bem === 0 && s.day === 0);
   check('存档默认：全网权重 100000', s.totalWeight === 100000);
-  check('图鉴条目数', F.CODEX.length >= 20, F.CODEX.length + ' 条');
+  check('图鉴条目数', F.CODEX.length === 24, F.CODEX.length + ' 条');
   check('三道真题都在', F.PROBLEMS.length === 3 && F.PROBLEMS.map(p => p.id).join(',') === 'fa,adder4,maj');
+}
+
+// ---------- 12. 集市（第四章，P1） ----------
+{
+  const s = F.defaultSave();
+  check('集市：默认存档含新字段（sites / relayGiB / lottery / cpu）',
+    Array.isArray(s.sites) && s.relayGiB === 0 && s.lottery.day === -1 && s.cpu && s.cpu.powered === false);
+  s.bem = 5;
+  const b1 = F.buyParts(s, 'nand10');
+  check('集市：1 BEM 买 10 NAND', b1.ok && Math.abs(s.bem - 4) < 1e-9 && s.nand === 210);
+  check('集市：不存在的商品买不了', F.buyParts(s, 'nope').ok === false);
+  const b2 = F.buyParts(s, 'latch20');
+  check('集市：3 BEM 买 20 LATCH', b2.ok && Math.abs(s.bem - 1) < 1e-9 && s.latch === 40);
+  check('集市：BEM 不够买不了（4 BEM 的货只剩 1 BEM）', F.buyParts(s, 'nand50').ok === false && Math.abs(s.bem - 1) < 1e-9);
+
+  const s2 = F.defaultSave();
+  s2.bem = 1;
+  check('集市：开网站 BEM 不够', F.openSite(s2, 'Jacks Chips').ok === false);
+  s2.bem = 5;
+  const site = F.openSite(s2, 'Jacks Chips');
+  check('集市：2 BEM 开网站，地址 tape:// 格式',
+    site.ok && site.site.addr === 'tape://jacks-chips.factory' && Math.abs(s2.bem - 3) < 1e-9);
+  check('集市：同名网站不能开第二家', F.openSite(s2, 'Jacks Chips').ok === false);
+  check('集市：空名字开不了', F.openSite(s2, '   ').ok === false);
+  check('集市：slug 规则', F.siteSlug('Hello World!') === 'hello-world' && F.siteSlug('') === 'mysite');
+
+  const s3 = F.defaultSave();
+  s3.bem = 0.1;
+  check('集市：加购存储 BEM 不够', F.relayBuyStorage(s3).ok === false);
+  s3.bem = 1;
+  const rg = F.relayBuyStorage(s3);
+  check('集市：0.2 BEM 加购 2 GiB', rg.ok && s3.relayGiB === 2 && Math.abs(s3.bem - 0.8) < 1e-9 && rg.totalGiB === 7);
+
+  const e1 = F.relayEncryptDemo('今晚八点开图');
+  const e2 = F.relayEncryptDemo('今晚八点开图');
+  const e3 = F.relayEncryptDemo('明早九点开图');
+  check('集市：加密演示指纹是 64 位 hex', /^0x[0-9a-f]{64}$/.test(e1.fingerprint));
+  check('集市：加密演示同文同密文', e1.cipher === e2.cipher && e1.fingerprint === e2.fingerprint);
+  check('集市：加密演示异文异指纹', e1.fingerprint !== e3.fingerprint);
+
+  const parts = F.lotteryParticipants();
+  check('集市：抽奖名单 8 人（含玩家）', parts.length === 8 && parts[0] === '你');
+  const d1 = F.lotteryDraw(parts, 'tapeXO-day-1-block-100137');
+  const d2 = F.lotteryDraw(parts, 'tapeXO-day-1-block-100137');
+  check('集市：抽奖同种子同结果（可重算验证）', d1.winnerIndex === d2.winnerIndex && d1.hash === d2.hash);
+  check('集市：抽奖结果在范围内', d1.winnerIndex >= 0 && d1.winnerIndex < parts.length && d1.winner === parts[d1.winnerIndex]);
+
+  const s4 = F.defaultSave();
+  s4.day = 3;
+  const r1 = F.lotteryEnter(s4);
+  check('集市：抽奖参加成功并记录', r1.ok && s4.lottery.day === 3 && s4.lottery.entered === true &&
+    F.lotteryParticipants().includes(s4.lottery.winner));
+  check('集市：抽奖中奖账目对得上', Math.abs(s4.bem - (r1.won ? F.LOTTERY_PRIZE_BEM : 0)) < 1e-9);
+  check('集市：同一天不能参加两次', F.lotteryEnter(s4).ok === false);
+  s4.day = 4;
+  check('集市：第二天可以再参加', F.lotteryEnter(s4).ok === true && s4.lottery.day === 4);
+
+  const s5 = F.defaultSave();
+  check('集市：没流片卡时集市未解锁', F.marketUnlocked(s5) === false && F.cpuUnlocked(s5) === false);
+  s5.taped = [{ id: 'c1', name: '全加器', nand: 9, latch: 0 }];
+  check('集市：有流片卡后集市与 CPU 神殿解锁', F.marketUnlocked(s5) === true && F.cpuUnlocked(s5) === true);
+
+  const s6 = F.defaultSave();
+  const marketEntry = F.CODEX.find(e => e.id === 'market');
+  const cpuEntry = F.CODEX.find(e => e.id === 'cpu4');
+  check('集市：图鉴“集市”须逛过集市才解锁',
+    marketEntry && F.codexUnlocked(s6, marketEntry) === false &&
+    (s6.visited.market = true, F.codexUnlocked(s6, marketEntry) === true));
+  check('集市：图鉴“4 位 CPU”须逛过 CPU 神殿才解锁',
+    cpuEntry && F.codexUnlocked(s6, cpuEntry) === false &&
+    (s6.visited.cpu = true, F.codexUnlocked(s6, cpuEntry) === true));
+}
+
+// ---------- 13. 终章 4 位计数器（真 tapnet 电路） ----------
+{
+  const cc = F.buildCounterCircuit();
+  check('终章：计数器电路生成', cc.ok && cc.circuit.nNand === 25 && cc.circuit.nLatch === 4,
+    cc.ok ? '' : cc.reason);
+  check('终章：计数器 0 入 4 出', cc.ok && cc.circuit.nIn === 0 && cc.circuit.nOut === 4);
+  check('终章：计数器 SHA-256 = 电路字节真哈希',
+    cc.ok && cc.sha === '0x' + T.sha256Hex(cc.bytes) && /^0x[0-9a-f]{64}$/.test(cc.sha));
+  let state = [0, 0, 0, 0];
+  const seq = [];
+  for (let i = 0; i < 17; i++) {
+    const r = T.beat(cc.circuit, state, []);
+    seq.push(F.counterValue(r.outputs));
+    state = r.state;
+  }
+  check('终章：计数器 17 拍 0→15→0 完整循环', seq.join(',') === '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0', seq.join(','));
+  check('终章：counterValue 位序（LSB-first）',
+    F.counterValue([1, 0, 1, 0]) === 5 && F.counterValue([0, 0, 0, 0]) === 0 && F.counterValue([1, 1, 1, 1]) === 15);
+
+  const save = F.defaultSave();
+  save.taped = [{ id: 'c1', name: '4 位加法器', nand: 36, latch: 0 }];
+  save.miners = [{ cardId: 'c1', processor: 'behemoth' }];
+  const s = F.settleDay(save);
+  check('终章：结算累计挖矿 minedTotal', Math.abs(save.minedTotal - s.total) < 1e-9, '累计 ' + save.minedTotal.toFixed(4));
+}
+
+// ---------- 14. 引导与里程碑（第 3 轮） ----------
+{
+  const fresh = F.defaultSave();
+  check('引导：新玩家第一步是设计台', F.nextStep(fresh).target === 'prologue');
+  const s1 = F.defaultSave(); s1.visited.prologue = true;
+  check('引导：逛过设计台后去任务板', F.nextStep(s1).target === 'ch1');
+  const s2 = F.defaultSave(); s2.visited.prologue = true; s2.passed = { fa: { gates: 9, stars: 3 } };
+  check('引导：通过一题后去流片', F.nextStep(s2).target === 'tapeout');
+  const s3 = F.defaultSave(); s3.visited.prologue = true; s3.passed = { fa: { gates: 9, stars: 3 } };
+  s3.taped = [{ id: 'c1', name: '全加器', nand: 9, latch: 0 }];
+  check('引导：流片后去矿场', F.nextStep(s3).target === 'mining');
+  const s4 = F.defaultSave(); s4.visited.prologue = true; s4.passed = { fa: { gates: 9, stars: 3 } };
+  s4.taped = [{ id: 'c1', name: '全加器', nand: 9, latch: 0 }];
+  s4.miners = [{ cardId: 'c1', processor: 'tapeout' }];
+  check('引导：有矿机没结算过去矿场结算', F.nextStep(s4).target === 'mining');
+  s4.day = 1; s4.minedTotal = 0.6;
+  check('引导：结算后去集市', F.nextStep(s4).target === 'market');
+  s4.visited.market = true;
+  check('引导：逛过集市后去 CPU 神殿', F.nextStep(s4).target === 'cpu');
+  s4.cpu.lit = true;
+  check('引导：点亮后去卡片馆', F.nextStep(s4).target === 'test1');
+  s4.visited.test1 = true;
+  s4.prologueDone = { not: true, and: true, or: true, latch: true };
+  s4.sites = [{ name: '阿杰的芯片铺', slug: 'mysite', addr: 'tape://mysite.factory', day: 1 }];
+  s4.lottery.entered = true;
+  check('引导：全通后去图鉴', F.nextStep(s4).target === 'codex');
+
+  const m0 = F.milestones(F.defaultSave());
+  check('里程碑：新玩家 8 个全未完成', m0.length === 8 && m0.every(m => !m.done));
+  const m1 = F.milestones(s4);
+  check('里程碑：全通存档 8 个全完成', m1.length === 8 && m1.every(m => m.done));
 }
 
 console.log('\n' + lines.join('\n'));
