@@ -254,7 +254,7 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
   check('存档默认：200 NAND / 20 LATCH / 0 BEM',
     s.nand === 200 && s.latch === 20 && s.bem === 0 && s.day === 0);
   check('存档默认：全网权重 100000', s.totalWeight === 100000);
-  check('图鉴条目数', F.CODEX.length === 24, F.CODEX.length + ' 条');
+  check('图鉴条目数', F.CODEX.length === 26, F.CODEX.length + ' 条');
   check('三道真题都在', F.PROBLEMS.length === 3 && F.PROBLEMS.map(p => p.id).join(',') === 'fa,adder4,maj');
 }
 
@@ -375,17 +375,75 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
   s4.visited.market = true;
   check('引导：逛过集市后去 CPU 神殿', F.nextStep(s4).target === 'cpu');
   s4.cpu.lit = true;
-  check('引导：点亮后去卡片馆', F.nextStep(s4).target === 'test1');
+  check('引导：点亮后先去开厂', F.nextStep(s4).target === 'factory');
+  s4.processors = [{ name: '阿杰的芯片厂', price: 0.02, dayOpened: 1, tapeouts: 0, earned: 0 }];
+  check('引导：开厂后去卡片馆', F.nextStep(s4).target === 'test1');
   s4.visited.test1 = true;
   s4.prologueDone = { not: true, and: true, or: true, latch: true };
   s4.sites = [{ name: '阿杰的芯片铺', slug: 'mysite', addr: 'tape://mysite.factory', day: 1 }];
   s4.lottery.entered = true;
+  s4.tokens = [{ name: '阿杰币', symbol: 'CHIP', mintedDay: 1, graduated: true, locked: 5, balance: 1.2 }];
   check('引导：全通后去图鉴', F.nextStep(s4).target === 'codex');
 
   const m0 = F.milestones(F.defaultSave());
-  check('里程碑：新玩家 8 个全未完成', m0.length === 8 && m0.every(m => !m.done));
+  check('里程碑：新玩家 10 个全未完成', m0.length === 10 && m0.every(m => !m.done));
   const m1 = F.milestones(s4);
-  check('里程碑：全通存档 8 个全完成', m1.length === 8 && m1.every(m => m.done));
+  check('里程碑：全通存档 10 个全完成', m1.length === 10 && m1.every(m => m.done));
+}
+
+// ---------- 15. 第五章开厂与发币（第 4 轮） ----------
+{
+  check('开厂：客流确定性（同名同天恒同）',
+    F.processorArrivals('阿杰的芯片厂', 5) === F.processorArrivals('阿杰的芯片厂', 5));
+  const a = F.processorArrivals('阿杰的芯片厂', 5);
+  check('开厂：客流 0–3 位', a >= 0 && a <= 3, '当日 ' + a + ' 位');
+
+  const save = F.defaultSave();
+  save.bem = 10;
+  const r1 = F.openProcessor(save, '阿杰的芯片厂', 0.02);
+  check('开厂：花 5 游戏 BEM 开一台', r1.ok && save.bem === 5 && save.processors.length === 1);
+  check('开厂：同名拒绝', !F.openProcessor(save, '阿杰的芯片厂', 0.02).ok);
+  check('开厂：非法定价拒绝', !F.openProcessor(save, '另一家', 0.03).ok);
+  check('开厂：名字超 20 字拒绝', !F.openProcessor(save, '一二三四五六七八九十一二三四五六七八九十一', 0.02).ok);
+  save.bem = 4;
+  check('开厂：BEM 不够拒绝', !F.openProcessor(save, '另一家', 0.02).ok);
+
+  const save2 = F.defaultSave();
+  save2.taped = [{ id: 'c1', name: '全加器', nand: 9, latch: 0 }];
+  save2.miners = [{ cardId: 'c1', processor: 'tapeout' }];
+  save2.bem = 0;
+  save2.processors = [{ name: '阿杰的芯片厂', price: 0.02, dayOpened: 0, tapeouts: 0, earned: 0 }];
+  const day = save2.day + 1;
+  const expectArr = F.processorArrivals('阿杰的芯片厂', day);
+  const expectRev = expectArr * 0.02 * 10;
+  const s = F.settleDay(save2);
+  check('开厂：结算收流片费（确定性）',
+    Math.abs(save2.processors[0].earned - expectRev) < 1e-9 && save2.processors[0].tapeouts === expectArr,
+    '来 ' + expectArr + ' 位，收 ' + expectRev.toFixed(2));
+  check('开厂：结算返回 factoryTotal', Math.abs((s.factoryTotal || 0) - expectRev) < 1e-9);
+  check('开厂：矿机产量不受影响', Math.abs(s.total - 9 / 100500 * 7200) < 1e-6);
+
+  const save3 = F.defaultSave();
+  save3.bem = 10;
+  const m1 = F.launchToken(save3, '阿杰币');
+  check('发币：mint 1 游戏 BEM，符号 CHIP', m1.ok && m1.symbol === 'CHIP' && save3.bem === 9 && save3.tokens.length === 1);
+  check('发币：同名拒绝', !F.launchToken(save3, '阿杰币').ok);
+  save3.bem = 0;
+  check('发币：BEM 不够拒绝', !F.launchToken(save3, '新币').ok);
+  save3.bem = 10;
+  check('发币：开币不满 2 天不能毕业', !F.graduateToken(save3, '阿杰币').ok);
+  save3.day = 2;
+  const g1 = F.graduateToken(save3, '阿杰币');
+  check('发币：满 2 天锁 5 游戏 BEM 毕业', g1.ok && save3.bem === 5 && save3.tokens[0].graduated && save3.tokens[0].locked === 5);
+  check('发币：已毕业不能再毕业', !F.graduateToken(save3, '阿杰币').ok);
+
+  const save4 = F.defaultSave();
+  save4.taped = [{ id: 'c1', name: '全加器', nand: 9, latch: 0 }];
+  save4.miners = [{ cardId: 'c1', processor: 'tapeout' }];
+  save4.tokens = [{ name: '阿杰币', symbol: 'CHIP', mintedDay: 0, graduated: true, locked: 5, balance: 0 }];
+  const s4 = F.settleDay(save4);
+  check('发币：毕业后矿机同时挖你的币（当日产量 10%）',
+    Math.abs(save4.tokens[0].balance - s4.total * 0.1) < 1e-9, '币 + ' + save4.tokens[0].balance.toFixed(4));
 }
 
 console.log('\n' + lines.join('\n'));

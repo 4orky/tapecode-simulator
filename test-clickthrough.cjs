@@ -39,10 +39,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const save = () => JSON.parse(window.localStorage.getItem('tapecode-factory-v1'));
 
   // ---------- 小镇 ----------
-  check('小镇：8 栋建筑', qa('.building').length === 8);
+  check('小镇：9 栋建筑', qa('.building').length === 9);
   check('小镇：旅程 7 步', qa('.j-step').length === 7);
   check('小镇：下一步引导指向设计台', /设计台/.test(q('#next-step').textContent));
-  check('小镇：里程碑 8 个', qa('.ms-chip').length === 8);
+  check('小镇：里程碑 10 个', qa('.ms-chip').length === 10);
   check('小镇：HUD 初始 200 NAND / 0 游戏 BEM',
     q('#res-nand').textContent === '200' && q('#res-bem').textContent === '0.00');
 
@@ -176,6 +176,38 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   check('CPU 神殿：跑满 16 拍点亮 CPU', /已点亮/.test(q('#cpu-panel').textContent) && save().cpu.lit === true);
   check('CPU 神殿：点亮后厂长履历出现', /厂长履历/.test(q('#cpu-panel').textContent) && !!q('#btn-cpu-share'));
 
+  // ---------- 处理器工厂（第五章：开厂与发币） ----------
+  // 攒够 11 游戏 BEM（开厂 5 + mint 1 + 毕业锁 5）
+  for (let i = 0; i < 25 && save().bem < 11.5; i++) {
+    nav('mining'); await sleep(50);
+    click(q('#btn-settle')); await sleep(50);
+  }
+  check('开厂：多结算攒够开厂钱（≥11.5 游戏 BEM）', save().bem >= 11.5, '当前 ' + save().bem.toFixed(2));
+  nav('factory');
+  await sleep(200);
+  check('处理器工厂：视图已出现', q('#view-factory').style.display !== 'none');
+  check('处理器工厂：长尾真实统计在界面上', /111 台 0 产出/.test(q('#factory-panel').textContent));
+  q('#in-factory-name').value = '阿杰的芯片厂';
+  click(q('#btn-open-factory'));
+  await sleep(100);
+  check('处理器工厂：开厂成功（花 5 游戏 BEM）',
+    save().processors.length === 1 && save().processors[0].name === '阿杰的芯片厂');
+  q('#in-token-name').value = '阿杰币';
+  click(q('#btn-mint-token'));
+  await sleep(100);
+  check('发币：mint 成功，符号 CHIP', save().tokens.length === 1 && save().tokens[0].symbol === 'CHIP');
+  click(q('[data-graduate="阿杰币"]'));
+  await sleep(100);
+  check('发币：开币不满 2 天毕业被拒', /满 2 天/.test(q('#token-msg').textContent), q('#token-msg').textContent);
+  for (let i = 0; i < 2; i++) { nav('mining'); await sleep(50); click(q('#btn-settle')); await sleep(50); }
+  nav('factory'); await sleep(100);
+  click(q('[data-graduate="阿杰币"]'));
+  await sleep(100);
+  check('发币：满 2 天毕业成功（锁 5 游戏 BEM）',
+    save().tokens[0].graduated === true && save().tokens[0].locked === 5);
+  nav('mining'); await sleep(50); click(q('#btn-settle')); await sleep(50);
+  check('发币：毕业后矿机挖到你的币', save().tokens[0].balance > 0, '余额 ' + save().tokens[0].balance.toFixed(4));
+
   // ---------- 卡片馆 + 模拟器（本地样本） ----------
   nav('test1');
   await sleep(300);
@@ -193,7 +225,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // ---------- 图鉴 ----------
   nav('codex');
   await sleep(200);
-  check('图鉴：24 条', qa('.codex-card').length === 24);
+  check('图鉴：26 条', qa('.codex-card').length === 26);
   check('图鉴：已解锁进度显示', /已解锁/.test(q('#codex-progress').textContent), q('#codex-progress').textContent);
 
   console.log('\n' + lines.join('\n'));

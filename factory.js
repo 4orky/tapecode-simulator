@@ -404,7 +404,71 @@
     });
     save.bem += total;
     save.minedTotal = (save.minedTotal || 0) + total;
-    return { day: save.day, total: total, totalWeight: save.totalWeight, lines: lines };
+    // 第五章：开的处理器收流片费（每位来流片的设计师平均烧 10 个 NAND）
+    var factoryTotal = 0;
+    save.processors.forEach(function (p) {
+      var n = processorArrivals(p.name, save.day);
+      var rev = n * p.price * 10;
+      p.tapeouts += n; p.earned += rev; factoryTotal += rev;
+      if (n > 0) lines.push({ cardName: '🏭 ' + p.name, processor: '来流片 ' + n + ' 位设计师', out: rev });
+    });
+    save.bem += factoryTotal;
+    // 已毕业的币：矿机同时挖你的币（当日矿机 BEM 产量的 10%）
+    save.tokens.forEach(function (t) {
+      if (t.graduated) t.balance += total * TOKEN_MINE_SHARE;
+    });
+    return { day: save.day, total: total, factoryTotal: factoryTotal, totalWeight: save.totalWeight, lines: lines };
+  }
+
+  /* ================= 第五章：开厂与发币（P2 起步） ================= */
+  // 真实规则原样保留：X Layer 389 台处理器、111 台 0 产出（2026-10-23 真实统计）；
+  // 开处理器真实约 0.0066 OKB，游戏里收 5 游戏 BEM（界面写明换算关系）。
+  // 客流是确定性的：同一名字同一天永远同一结果（SHA-256 首位 hex % 4 → 0–3 位），
+  // 回归可断言，不引入 Math.random（settleDay 的确定性不被打破）。
+  var FACTORY_OPEN_COST_BEM = 5;
+  var FACTORY_PRICES = [0.01, 0.02, 0.05]; // 每 NAND 的晶体管价（游戏 BEM）
+  var TOKEN_MINT_COST_BEM = 1;
+  var TOKEN_GRADUATE_COST_BEM = 5; // 毕业锁 5 游戏 BEM 做流动性
+  var TOKEN_GRADUATE_MIN_AGE = 2; // 开币满 2 天才能毕业
+  var TOKEN_MINE_SHARE = 0.1; // 毕业后矿机同时挖你的币：当日矿机 BEM 产量的 10%
+  function processorArrivals(name, day) {
+    var h = T.sha256Hex(new TextEncoder().encode(name + '|' + day));
+    return parseInt(h[0], 16) % 4;
+  }
+  function openProcessor(save, name, price) {
+    if (!name || name.length > 20) return { ok: false, reason: '处理器名字 1–20 字' };
+    var dup = false;
+    save.processors.forEach(function (p) { if (p.name === name) dup = true; });
+    if (dup) return { ok: false, reason: '已有一台同名处理器' };
+    if (FACTORY_PRICES.indexOf(price) < 0) return { ok: false, reason: '定价只能选 0.01 / 0.02 / 0.05 游戏 BEM 每 NAND' };
+    if (save.bem < FACTORY_OPEN_COST_BEM) return { ok: false, reason: '开处理器要 5 游戏 BEM，你只有 ' + save.bem.toFixed(2) };
+    save.bem -= FACTORY_OPEN_COST_BEM;
+    save.processors.push({ name: name, price: price, dayOpened: save.day, tapeouts: 0, earned: 0 });
+    return { ok: true };
+  }
+  function tokenByName(save, name) {
+    var found = null;
+    save.tokens.forEach(function (t) { if (t.name === name) found = t; });
+    return found;
+  }
+  function launchToken(save, name) {
+    if (!name || name.length > 20) return { ok: false, reason: '币名 1–20 字' };
+    if (tokenByName(save, name)) return { ok: false, reason: '已发过同名币' };
+    if (save.bem < TOKEN_MINT_COST_BEM) return { ok: false, reason: 'mint 晶体管要 1 游戏 BEM，你只有 ' + save.bem.toFixed(2) };
+    save.bem -= TOKEN_MINT_COST_BEM;
+    var sym = name.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4) || 'CHIP';
+    save.tokens.push({ name: name, symbol: sym, mintedDay: save.day, graduated: false, locked: 0, balance: 0 });
+    return { ok: true, symbol: sym };
+  }
+  function graduateToken(save, name) {
+    var t = tokenByName(save, name);
+    if (!t) return { ok: false, reason: '没这个币' };
+    if (t.graduated) return { ok: false, reason: '已经毕业了' };
+    if (save.day - t.mintedDay < TOKEN_GRADUATE_MIN_AGE) return { ok: false, reason: '开币才 ' + (save.day - t.mintedDay) + ' 天，满 2 天才能毕业' };
+    if (save.bem < TOKEN_GRADUATE_COST_BEM) return { ok: false, reason: '毕业要锁 5 游戏 BEM 做流动性，你只有 ' + save.bem.toFixed(2) };
+    save.bem -= TOKEN_GRADUATE_COST_BEM;
+    t.graduated = true; t.locked = TOKEN_GRADUATE_COST_BEM;
+    return { ok: true };
   }
 
   /* ================= 终章：4 位二进制计数器（真 tapnet 电路） ================= */
@@ -556,8 +620,9 @@
     if (save.day === 0) return { target: 'mining', text: '去矿场点「结算一天」，看你的矿机产出第一笔游戏 BEM。' };
     if (!save.visited.market) return { target: 'market', text: '去集市：把挖到的游戏 BEM 花出去——买零件、开网站、抽奖。' };
     if (!save.cpu.lit) return { target: 'cpu', text: '去 CPU 神殿：给 4 位 CPU 上电，跑满 16 拍点亮它。' };
+    if (save.processors.length === 0) return { target: 'factory', text: '去处理器工厂：花 5 游戏 BEM 开自己的处理器，自己定晶体管价——但先看清长尾：389 台里 111 台 0 产出。' };
     if (!save.visited.test1) return { target: 'test1', text: '去卡片馆：玩 5 张真实 Test1 电路卡的网表。' };
-    return { target: 'codex', text: '通关了！去图鉴看看生态全景（24 条），或者继续优化电路、冲击更少门数。' };
+    return { target: 'codex', text: '通关了！去图鉴看看生态全景（26 条），或者继续优化电路、冲击更少门数。' };
   }
   function milestones(save) {
     return [
@@ -568,7 +633,9 @@
       { id: 'm-first-bem', name: '第一笔游戏 BEM 到账', done: (save.minedTotal || 0) > 0 },
       { id: 'm-first-site', name: '第一家 DeWEB 网站', done: save.sites.length > 0 },
       { id: 'm-first-lottery', name: '第一次参加抽奖', done: !!save.lottery.entered },
-      { id: 'm-cpu-lit', name: '点亮 CPU', done: !!save.cpu.lit }
+      { id: 'm-cpu-lit', name: '点亮 CPU', done: !!save.cpu.lit },
+      { id: 'm-first-factory', name: '开一家处理器', done: save.processors.length > 0 },
+      { id: 'm-first-token', name: '发一个自己的币', done: save.tokens.length > 0 }
     ];
   }
 
@@ -585,7 +652,7 @@
       codex: [], visited: {}, prologueDone: {}, drafts: {},
       sites: [], relayGiB: 0, lottery: { day: -1, entered: false, winner: '', won: false, seed: '' },
       cpu: { powered: false, clock: 0, count: 0, best: 0, lit: false },
-      processors: [], minedTotal: 0
+      processors: [], minedTotal: 0, tokens: []
     };
   }
   function loadSave() {
@@ -649,6 +716,91 @@
   }
   // 序章草稿走同一条 compileDraft（draftProblem 对 '__prologue__' 返回
   // 草稿自带的 nIn/nOut/inNames/outNames），不用另写序列化。
+
+  /* ================= 第五章：处理器工厂（开厂与发币） ================= */
+  function renderFactory() {
+    var box = $('factory-panel');
+    if (!SAVE.cpu.lit) {
+      box.innerHTML = '<p class="hint">🔒 先点亮 CPU（神殿），再来开厂——老板要先懂芯片是怎么跑起来的。</p>';
+      return;
+    }
+    var html = '<p class="hint">📊 真实统计（2026-10-23 快照）：X Layer 389 台处理器，111 台 0 产出。开厂费真实约 0.0066 OKB，游戏里收 5 游戏 BEM。每天来流片的设计师 0–3 位（由名字+天数确定，不随机），每位平均烧 10 个 NAND，按你定的价收钱。</p>' +
+      '<p>你现在有 <b>' + SAVE.bem.toFixed(2) + ' 游戏 BEM</b> · 第 ' + SAVE.day + ' 天。</p>';
+    // 开处理器
+    html += '<div class="panel"><h3>🏭 开一台处理器</h3>' +
+      '<p>名字：<input id="in-factory-name" type="text" maxlength="20" placeholder="如：阿杰的芯片厂" style="width:180px"> ' +
+      '晶体管价：<select id="in-factory-price">' + FACTORY_PRICES.map(function (p) {
+        return '<option value="' + p + '">' + p + ' 游戏 BEM / NAND</option>';
+      }).join('') + '</select> ' +
+      '<button class="btn-primary" id="btn-open-factory">开厂（5 游戏 BEM）</button></p>' +
+      '<p class="hint" id="factory-open-msg"></p>';
+    if (SAVE.processors.length === 0) {
+      html += '<p class="hint">你还没开过处理器。定价越低来的设计师越多（但每单赚得少）——价格档只有三档，0.01 / 0.02 / 0.05。</p>';
+    } else {
+      html += '<ul>' + SAVE.processors.map(function (p) {
+        var today = processorArrivals(p.name, SAVE.day);
+        return '<li><b>' + esc(p.name) + '</b> · ' + p.price + ' 游戏 BEM/NAND · 第 ' + p.dayOpened + ' 天开张 · 累计接待流片 ' +
+          p.tapeouts + ' 次 · 累计收入 ' + p.earned.toFixed(2) + ' 游戏 BEM · 今天预计来 ' + today + ' 位设计师</li>';
+      }).join('') + '</ul>';
+    }
+    html += '</div>';
+    // 发币三步
+    html += '<div class="panel"><h3>🪙 发自己的币（TapeHub 三步）</h3>' +
+      '<p>① mint 晶体管 → ② 毕业上流动性 → ③ 矿机慢慢挖自己的币。</p>' +
+      '<p>币名：<input id="in-token-name" type="text" maxlength="20" placeholder="如：阿杰币" style="width:140px"> ' +
+      '<button class="btn-primary" id="btn-mint-token">① mint（1 游戏 BEM）</button></p>' +
+      '<p class="hint" id="token-msg"></p>';
+    if (SAVE.tokens.length === 0) {
+      html += '<p class="hint">你还没发过币。毕业要锁 5 游戏 BEM 做流动性，且开币满 2 天；毕业后矿机每天同时挖你的币（当日 BEM 产量的 10%）。</p>';
+    } else {
+      html += '<ul>' + SAVE.tokens.map(function (t) {
+        var age = SAVE.day - t.mintedDay;
+        var status = t.graduated
+          ? '✅ 已毕业 · 锁了 ' + t.locked + ' 游戏 BEM 流动性 · 持有 ' + t.balance.toFixed(2) + ' ' + t.symbol
+          : '⏳ 未毕业 · 开币 ' + age + ' 天（满 2 天可毕业）';
+        return '<li><b>' + esc(t.name) + '</b>（' + t.symbol + '）· ' + status +
+          (t.graduated ? '' : ' <button data-graduate="' + esc(t.name) + '">② 毕业（锁 5 游戏 BEM）</button>') + '</li>';
+      }).join('') + '</ul>';
+    }
+    html += '</div>';
+    box.innerHTML = html;
+    $('btn-open-factory').onclick = function () {
+      var name = $('in-factory-name').value.trim();
+      var price = parseFloat($('in-factory-price').value);
+      var r = openProcessor(SAVE, name, price);
+      if (r.ok) {
+        save(); renderFactory(); refreshHud();
+        setStatus('✓ 处理器「' + name + '」开张了！每天等设计师来流片，结算时收钱。');
+      } else {
+        $('factory-open-msg').textContent = r.reason;
+        setStatus('开不了厂：' + r.reason);
+      }
+    };
+    $('btn-mint-token').onclick = function () {
+      var name = $('in-token-name').value.trim();
+      var r = launchToken(SAVE, name);
+      if (r.ok) {
+        save(); renderFactory(); refreshHud();
+        setStatus('✓ ' + name + '（' + r.symbol + '）mint 成功！满 2 天 + 锁 5 游戏 BEM 就能毕业。');
+      } else {
+        $('token-msg').textContent = r.reason;
+        setStatus('发不了币：' + r.reason);
+      }
+    };
+    Array.prototype.forEach.call(box.querySelectorAll('[data-graduate]'), function (b) {
+      b.onclick = function () {
+        var r = graduateToken(SAVE, b.getAttribute('data-graduate'));
+        if (r.ok) {
+          save(); renderFactory(); refreshHud();
+          setStatus('✓ 毕业了！矿机从今天起同时挖你的币（当日 BEM 产量的 10%）。');
+        } else {
+          $('token-msg').textContent = r.reason;
+          setStatus('毕不了业：' + r.reason);
+        }
+      };
+    });
+    refreshHud();
+  }
 
   /* ================= 图鉴（Codex） ================= */
   // 事实来源：research/ECOSYSTEM.md。状态：live 已实现 / alpha 测试中 / draft 草案 / unverified 未核实。
@@ -722,6 +874,12 @@
     { id: 'cpu4', name: '4 位 CPU（点亮）', status: 'live', source: 'ECOSYSTEM §3.1 · Behemoth',
       what: '把加法器、寄存器拼成一台 4 位 CPU：时钟一拍一拍走，区块就是时钟。Behemoth 是真的 4 位链上 CPU，约 2,300 门，对标 1971 年 Intel 4004，永久运行、免费调用。',
       unlock: 'cpu' },
+    { id: 'factory', name: '处理器工厂（开厂）', status: 'live', source: 'GAME_CONCEPT §4 第五章 · ECOSYSTEM §3.3',
+      what: '花一笔 BEM 开自己的处理器，自己定晶体管价，别人的电路来流片你就收钱。真实统计（2026-10-23）：X Layer 389 台处理器，111 台 0 产出——开厂不等于赚钱，长尾很残酷。',
+      unlock: 'factory' },
+    { id: 'token', name: '发币（TapeHub）', status: 'live', source: 'GAME_CONCEPT §4 第五章 · ECOSYSTEM §3.3',
+      what: 'TapeHub 式发币三步：先 mint 自己项目的晶体管，达标“毕业”上流动性，再用矿机慢慢挖自己的币。游戏里：mint 1 游戏 BEM，开币满 2 天 + 锁 5 游戏 BEM 毕业，毕业后矿机每天同时挖你的币（当日 BEM 产量的 10%）。',
+      unlock: 'factory' },
     { id: 'tapesend', name: 'TapeSend', status: 'unverified', source: 'ECOSYSTEM §3.2',
       what: '号称“多链端到端加密消息层”，但除一句话介绍外找不到仓库、文档、API 或演示，很可能已被 TapeRelay 的消息功能取代。本游戏不声称调用它。',
       unlock: 'test1' }
@@ -736,6 +894,7 @@
     if (entry.unlock === 'test1') return !!save.visited.test1;
     if (entry.unlock === 'market') return !!save.visited.market;
     if (entry.unlock === 'cpu') return !!save.visited.cpu;
+    if (entry.unlock === 'factory') return !!save.visited.factory;
     return false;
   }
 
@@ -783,6 +942,11 @@
     lotteryDraw: lotteryDraw, lotteryEnter: lotteryEnter,
     marketUnlocked: marketUnlocked, cpuUnlocked: cpuUnlocked,
     buildCounterCircuit: buildCounterCircuit, counterValue: counterValue,
+    FACTORY_OPEN_COST_BEM: FACTORY_OPEN_COST_BEM, FACTORY_PRICES: FACTORY_PRICES,
+    TOKEN_MINT_COST_BEM: TOKEN_MINT_COST_BEM, TOKEN_GRADUATE_COST_BEM: TOKEN_GRADUATE_COST_BEM,
+    TOKEN_GRADUATE_MIN_AGE: TOKEN_GRADUATE_MIN_AGE, TOKEN_MINE_SHARE: TOKEN_MINE_SHARE,
+    processorArrivals: processorArrivals, openProcessor: openProcessor,
+    launchToken: launchToken, graduateToken: graduateToken, tokenByName: tokenByName,
     nextStep: nextStep, milestones: milestones,
     SAVE_KEY: SAVE_KEY, defaultSave: defaultSave, loadSave: loadSave, storeSave: storeSave,
     totalStars: totalStars,
@@ -811,7 +975,7 @@
     $('res-stars').textContent = totalStars(SAVE);
   }
 
-  var VIEWS = ['town', 'prologue', 'ch1', 'tapeout', 'mining', 'market', 'cpu', 'test1', 'codex', 'sim'];
+  var VIEWS = ['town', 'prologue', 'ch1', 'tapeout', 'mining', 'market', 'cpu', 'factory', 'test1', 'codex', 'sim'];
   function switchView(name) {
     if (typeof cpuStopAuto === 'function') cpuStopAuto(); // 离开 CPU 神殿就停掉自动跑
     VIEWS.forEach(function (v) { show($('view-' + v), v === name); });
@@ -825,6 +989,7 @@
     if (name === 'mining') { SAVE.visited.mining = true; save(); renderMining(); }
     if (name === 'market') { SAVE.visited.market = true; save(); renderMarket(); }
     if (name === 'cpu') { SAVE.visited.cpu = true; save(); renderCpu(); }
+    if (name === 'factory') { SAVE.visited.factory = true; save(); renderFactory(); }
     if (name === 'test1') { SAVE.visited.test1 = true; save(); renderTest1(); }
     if (name === 'codex') renderCodex();
     window.scrollTo(0, 0);
@@ -851,6 +1016,7 @@
     { id: 'mining', name: '矿场', desc: '第三章 · 挖 BEM', icon: '⛏', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
     { id: 'market', name: '集市', desc: '第四章 · 花 BEM', icon: '🏪', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
     { id: 'cpu', name: 'CPU 神殿', desc: '终章 · 点亮 CPU', icon: '🖥️', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
+    { id: 'factory', name: '处理器工厂', desc: '第五章 · 开厂', icon: '🏭', open: function () { return SAVE.cpu.lit; }, lock: '先点亮 CPU（神殿）' },
     { id: 'test1', name: '卡片馆', desc: 'Test1 图鉴 · 真实网表', icon: '▦', open: function () { return true; }, hint: '5 张真实 Test1 电路卡，可进模拟器玩' },
     { id: 'codex', name: '图鉴', desc: '生态全景', icon: '▧', open: function () { return true; }, hint: '每遇到一个新组件，图鉴亮一条' }
   ];
@@ -875,7 +1041,7 @@
     $('journey').innerHTML = steps.map(function (s, i) {
       var cls = i + 1 < stage ? 'done' : (i + 1 === stage ? 'now' : 'later');
       return '<span class="j-step ' + cls + '">' + s + '</span>' + (i < steps.length - 1 ? '<span class="j-arrow">→</span>' : '');
-    }).join('') + '<span class="j-note">（开厂 / 建应用是 P2，继续打磨中）</span>';
+    }).join('') + '<span class="j-note">（' + (SAVE.processors.length > 0 ? '你已开厂：小镇里多了一栋处理器工厂' : '开厂在小镇的处理器工厂，点亮 CPU 后解锁') + '）</span>';
     // 下一步引导（一次只给一句话，永远有门槛在眼前）
     var ns = nextStep(SAVE);
     $('next-step').innerHTML = '<div class="next-step">👉 下一步：' + esc(ns.text) +
