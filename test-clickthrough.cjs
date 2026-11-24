@@ -318,6 +318,15 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   click(q('[data-size="4"]'));
   await sleep(200);
   check('生命游戏：切回 4×4 后 16 格', qa('.life-cell').length === 16);
+  // 自动演化（第 35 轮）：开自动 → 世代前进 → 关自动 → 世代停住
+  const genOf = () => { const m = /第 (\d+) 代/.exec(q('#cpu-panel').textContent); return m ? parseInt(m[1], 10) : -1; };
+  click(q('#btn-life-auto'));
+  await sleep(1600);
+  const genRunning = genOf();
+  check('生命游戏：自动演化开，世代前进 ≥2', genRunning >= 2, '第 ' + genRunning + ' 代');
+  click(q('#btn-life-auto'));
+  await sleep(900);
+  check('生命游戏：自动演化关，世代停住', genOf() === genRunning, '仍是第 ' + genOf() + ' 代');
 
   // ---------- 处理器工厂（第五章：开厂与发币） ----------
   // 攒够 11 游戏 BEM（开厂 5 + mint 1 + 毕业锁 5）
