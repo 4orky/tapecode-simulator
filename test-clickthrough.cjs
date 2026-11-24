@@ -44,6 +44,11 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   click(q('#btn-welcome-start'));
   await sleep(200);
   check('欢迎弹窗：点开始造芯后关闭并进设计台', q('#modal-root').style.display === 'none' && q('#view-prologue').style.display !== 'none');
+  // 图鉴锁定卡人话（第 24 轮）：新开页面时多数图鉴条目是锁定的，检查锁定文案
+  nav('codex');
+  await sleep(200);
+  check('图鉴：锁定卡片显示人话解锁条件', /解锁条件：去任务板通过一道题/.test(q('#codex-grid').textContent));
+  check('图鉴：锁定卡片不显示内部 key', !/🔒 ch1/.test(q('#codex-grid').textContent));
   nav('town');
   await sleep(200);
 

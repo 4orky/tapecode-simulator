@@ -709,6 +709,15 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
   check('星星合计：6 道题全 3 星 = 18', F.totalStars(full) === 18);
 }
 
+// ---------- 27. 图鉴解锁条件人话（第 24 轮） ----------
+{
+  const keys = [...new Set(F.CODEX.map(e => e.unlock))];
+  check('解锁人话：图鉴用到的每个解锁条件都有人话', keys.every(k => F.codexUnlockLabel(k) && F.codexUnlockLabel(k) !== k));
+  check('解锁人话：ch1 说人话', F.codexUnlockLabel('ch1') === '去任务板通过一道题');
+  check('解锁人话：cpu 说人话', F.codexUnlockLabel('cpu') === '去 CPU 神殿点亮 CPU');
+  check('解锁人话：未知 key 原样返回（不崩）', F.codexUnlockLabel('xxx') === 'xxx');
+}
+
 console.log('\n' + lines.join('\n'));
 console.log(`\n合计：${pass} 通过 / ${fail} 失败`);
 process.exit(fail ? 1 : 0);

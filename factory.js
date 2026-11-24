@@ -1023,6 +1023,13 @@
       unlock: 'cpu' }
   ];
   var STATUS_LABEL = { live: '✅ 已实现', alpha: '🧪 测试中', draft: '📝 草案', unverified: '❓ 未核实' };
+  // 解锁条件的人话（第 24 轮）：锁定卡片以前直接显示内部 key（如“🔒 ch1”），用户看不懂
+  var UNLOCK_LABEL = {
+    always: '一直可见', prologue: '去设计台逛逛', ch1: '去任务板通过一道题',
+    tapeout: '去流片厂流一片', mining: '去矿场注册一台矿机', test1: '去卡片馆看看',
+    market: '去集市逛逛', cpu: '去 CPU 神殿点亮 CPU', factory: '去处理器工厂开厂'
+  };
+  function codexUnlockLabel(unlock) { return UNLOCK_LABEL[unlock] || unlock; }
   function codexUnlocked(save, entry) {
     if (entry.unlock === 'always') return true;
     if (entry.unlock === 'prologue') return !!save.visited.prologue;
@@ -1093,7 +1100,7 @@
     exportSaveText: exportSaveText, importSaveText: importSaveText,
     totalStars: totalStars,
     prologueDraft: prologueDraft,
-    CODEX: CODEX, STATUS_LABEL: STATUS_LABEL, codexUnlocked: codexUnlocked,
+    CODEX: CODEX, STATUS_LABEL: STATUS_LABEL, codexUnlocked: codexUnlocked, codexUnlockLabel: codexUnlockLabel,
     TEST1_CARDS: TEST1_CARDS
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = pure;
@@ -2529,7 +2536,7 @@
       return '<article class="codex-card' + (ok ? '' : ' locked') + '">' +
         '<h3>' + esc(e.name) + ' ' + (ok ? '<span class="badge st-' + e.status + '">' + e.status + '</span>' : '🔒') + '</h3>' +
         (ok ? '<p>' + esc(e.what) + '</p><p class="hint">来源：' + esc(e.source) + '</p>'
-          : '<p class="hint">🔒 ' + esc(e.unlock) + '</p>') +
+          : '<p class="hint">🔒 解锁条件：' + esc(codexUnlockLabel(e.unlock)) + '</p>') +
         '</article>';
     }).join('');
   }
