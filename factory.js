@@ -781,7 +781,7 @@
       sites: [], relayGiB: 0, lottery: { day: -1, entered: false, winner: '', won: false, seed: '' },
       cpu: { powered: false, clock: 0, count: 0, best: 0, lit: false,
         life: { gen: 0, size: 4, cells: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] } },
-      processors: [], minedTotal: 0, tokens: [], ledger: []
+      processors: [], minedTotal: 0, tokens: [], ledger: [], sound: true
     };
   }
   function loadSave() {
@@ -1125,6 +1125,33 @@
   function $(id) { return document.getElementById(id); }
   function show(el, on) { if (el) el.style.display = on ? '' : 'none'; }
   function setStatus(msg) { var el = $('status-line'); if (el) el.textContent = msg; }
+
+  /* ================= 音效（第 53 轮） ================= */
+  // WebAudio 合成短音，无素材文件；首次交互后才能出声（浏览器规则），验货/结算/点亮
+  // 都是点击触发的，正好合规。SAVE.sound === false 时静音，开关在 HUD 里。
+  var SOUND_CTX = null;
+  function playTone(freq, dur, delay) {
+    try {
+      if (SAVE.sound === false) return;
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!SOUND_CTX) SOUND_CTX = new AC();
+      if (SOUND_CTX.state === 'suspended') SOUND_CTX.resume();
+      var t0 = SOUND_CTX.currentTime + (delay || 0);
+      var o = SOUND_CTX.createOscillator(), g = SOUND_CTX.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.12, t0 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(SOUND_CTX.destination);
+      o.start(t0); o.stop(t0 + dur + 0.05);
+    } catch (e) {}
+  }
+  function playChime(kind) {
+    if (kind === 'pass') { playTone(660, 0.18, 0); playTone(880, 0.25, 0.12); }
+    else if (kind === 'coin') { playTone(990, 0.12, 0); }
+    else if (kind === 'lit') { playTone(523, 0.2, 0); playTone(659, 0.2, 0.12); playTone(784, 0.3, 0.24); }
+  }
 
   function refreshHud() {
     $('res-nand').textContent = SAVE.nand;
@@ -1787,6 +1814,7 @@
           save();
         }
         setStatus('✓ ' + prob.name + ' 真值表全过！' + B.draft.gates.length + ' 门，' + stars + ' 星。可以去流片了。');
+        playChime('pass');
       } else {
         setStatus('✗ 真值表 ' + v.passed + '/' + v.total + ' 行通过，红行是错的地方，对照期望输出改改接线。');
       }
@@ -2010,6 +2038,7 @@
         return l.cardName + '（' + l.processor + '）产 ' + l.out.toFixed(2);
       }).join('，');
       $('settle-result').textContent = lines + '。合计 ' + r.total.toFixed(2) + ' 游戏 BEM，全网权重涨到 ' + r.totalWeight + '。';
+      if (r.total + r.factoryTotal > 0) playChime('coin');
       renderMining();
       setStatus('✓ ' + lines + '。');
     };
@@ -2165,7 +2194,7 @@
     SAVE.cpu.clock += 1;
     SAVE.cpu.count = cpuCurrentCount();
     if (SAVE.cpu.count > SAVE.cpu.best) SAVE.cpu.best = SAVE.cpu.count;
-    if (SAVE.cpu.clock >= 16) SAVE.cpu.lit = true;
+    if (SAVE.cpu.clock >= 16 && !SAVE.cpu.lit) { SAVE.cpu.lit = true; playChime('lit'); }
     save();
   }
   function cpuStopAuto() {
@@ -2597,6 +2626,17 @@
     Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (b) {
       b.onclick = function () { switchView(b.getAttribute('data-nav')); };
     });
+    // 音效开关（第 53 轮）
+    var snd = $('btn-sound');
+    if (snd) {
+      snd.textContent = SAVE.sound === false ? '🔇' : '🔊';
+      snd.onclick = function () {
+        SAVE.sound = SAVE.sound === false;
+        save();
+        snd.textContent = SAVE.sound === false ? '🔇' : '🔊';
+        if (SAVE.sound !== false) playChime('coin');
+      };
+    }
     // 模拟器控制
     var lb = $('sim-load-live');
     if (lb) lb.onclick = function () { loadSim($('sim-token').value, 'live'); };
