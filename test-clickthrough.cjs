@@ -64,6 +64,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   // ---------- 小镇 ----------
   check('小镇：9 栋建筑', qa('.building').length === 9);
+  check('无 JS 提示：noscript 在位', !!q('noscript') && /需要 JavaScript/.test(q('noscript').textContent));
   check('HUD：星星满分是 18（6 道题 × 3 星）', q('#res-stars-max').textContent === '18');
   check('小镇：旅程 7 步', qa('.j-step').length === 7);
   check('小镇：下一步引导指向任务板（欢迎弹窗已带用户逛过设计台）', /任务板/.test(q('#next-step').textContent));
