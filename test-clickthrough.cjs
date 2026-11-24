@@ -283,6 +283,20 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await sleep(100);
   check('模拟器：输入全 1 后输出 = 10000111（与回归一致）',
     /输出 10000111/.test(q('#sim-controls').textContent), q('#sim-controls .io-bits').textContent);
+  // 上一张/下一张（第 18 轮）：从 #1000 下一张到 #1001（无本地样本，给明错）；输入框同步
+  click(q('#sim-next'));
+  await sleep(500);
+  check('模拟器：下一张翻到 #1001，输入框同步', q('#sim-token').value === '1001');
+  check('模拟器：#1001 无本地样本，给明错', /加载失败|没有/.test(q('#sim-status').textContent), q('#sim-status').textContent);
+  // 边界循环：10000 的下一张回到 1（有本地样本，加载成功）
+  q('#sim-token').value = '10000';
+  click(q('#sim-next'));
+  await sleep(2500);
+  check('模拟器：10000 的下一张回到 #1 并加载成功', q('#sim-token').value === '1' && /已加载/.test(q('#sim-status').textContent), q('#sim-status').textContent);
+  // 边界循环：1 的上一张到 10000（无本地样本，给明错）
+  click(q('#sim-prev'));
+  await sleep(500);
+  check('模拟器：#1 的上一张到 #10000，输入框同步', q('#sim-token').value === '10000');
 
   // ---------- 图鉴 ----------
   nav('codex');

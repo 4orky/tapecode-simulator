@@ -2418,6 +2418,7 @@
   async function loadSim(id, mode) {
     id = +id;
     if (!id || id < 1 || id > 10000) { $('sim-status').textContent = '编号须在 1–10000 之间。'; return; }
+    $('sim-token').value = id; // 上一张/下一张翻号后，输入框同步显示当前编号
     $('sim-status').textContent = '正在加载 Test1 #' + id + '（' + (mode === 'live' ? '实时 9 步链' : '本地样本') + '）……';
     $('sim-steps').innerHTML = '';
     $('sim-board').innerHTML = '';
@@ -2547,6 +2548,17 @@
     if (lb) lb.onclick = function () { loadSim($('sim-token').value, 'live'); };
     var ls = $('sim-load-local');
     if (ls) ls.onclick = function () { loadSim($('sim-token').value, 'local'); };
+    // 上一张/下一张（第 18 轮）：按当前模式（实时链/本地样本）翻号，1–10000 循环
+    var sp = $('sim-prev');
+    if (sp) sp.onclick = function () {
+      var id = (+$('sim-token').value || 1) - 1; if (id < 1) id = 10000;
+      loadSim(id, SIM.source === 'live' ? 'live' : 'local');
+    };
+    var sn = $('sim-next');
+    if (sn) sn.onclick = function () {
+      var id = (+$('sim-token').value || 1) + 1; if (id > 10000) id = 1;
+      loadSim(id, SIM.source === 'live' ? 'live' : 'local');
+    };
     var bk = $('sim-back');
     if (bk) bk.onclick = function () { switchView('test1'); };
     // 第一章工具条
