@@ -718,6 +718,16 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
   check('解锁人话：未知 key 原样返回（不崩）', F.codexUnlockLabel('xxx') === 'xxx');
 }
 
+// ---------- 28. 总账（第 25 轮） ----------
+{
+  check('总账：标准解总门数 par 合计 295', F.parTotal() === 295, '算得 ' + F.parTotal());
+  const save = F.defaultSave();
+  check('总账：没通过时 0 道 / 0 门', F.bestGatesTotal(save).done === 0 && F.bestGatesTotal(save).gates === 0);
+  save.passed = { fa: { gates: 9, stars: 3 }, maj: { gates: 7, stars: 2 } };
+  const bt = F.bestGatesTotal(save);
+  check('总账：通 2 道、最佳总门数 16', bt.done === 2 && bt.gates === 16);
+}
+
 console.log('\n' + lines.join('\n'));
 console.log(`\n合计：${pass} 通过 / ${fail} 失败`);
 process.exit(fail ? 1 : 0);

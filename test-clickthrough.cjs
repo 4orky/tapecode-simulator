@@ -108,6 +108,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   nav('ch1');
   await sleep(200);
   check('第一章：6 道题标签', qa('.ptab').length === 6);
+  // 总账（第 25 轮）：新开页面 0 道通过，总账显示 0/6 与标准解 295
+  check('第一章：总账显示已通 0/6、标准解总门数 295', /已通 0\/6 道/.test(q('#ch1-meta').textContent) && /标准解总门数 295/.test(q('#ch1-meta').textContent));
   for (let i = 0; i < 9; i++) click(q('#btn-add-gate'));
   await sleep(100);
   check('第一章：点了 9 次加门，画布 9 门，晶体管 191',

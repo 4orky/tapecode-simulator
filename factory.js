@@ -805,6 +805,16 @@
     Object.keys(save.stars).forEach(function (k) { n += save.stars[k]; });
     return n;
   }
+  // 总账（第 25 轮，Zachtronics 式“你的解 vs 标准解”）：标准解总门数 = 各题 par 之和；
+  // 你的最佳总门数 = 每道已通过题的最佳门数之和。
+  function parTotal() {
+    return PROBLEMS.reduce(function (a, p) { return a + p.par; }, 0);
+  }
+  function bestGatesTotal(save) {
+    var n = 0, done = 0;
+    PROBLEMS.forEach(function (p) { if (save.passed[p.id]) { n += save.passed[p.id].gates; done++; } });
+    return { gates: n, done: done };
+  }
 
   /* ================= 序章实验（预制电路，用同一套 compileDraft） ================= */
   // 每个实验 = 一个“题目外”的小草稿：nIn/nOut + 门表 + 输出接法。
@@ -1098,7 +1108,7 @@
     nextStep: nextStep, milestones: milestones,
     SAVE_KEY: SAVE_KEY, defaultSave: defaultSave, loadSave: loadSave, storeSave: storeSave,
     exportSaveText: exportSaveText, importSaveText: importSaveText,
-    totalStars: totalStars,
+    totalStars: totalStars, parTotal: parTotal, bestGatesTotal: bestGatesTotal,
     prologueDraft: prologueDraft,
     CODEX: CODEX, STATUS_LABEL: STATUS_LABEL, codexUnlocked: codexUnlocked, codexUnlockLabel: codexUnlockLabel,
     TEST1_CARDS: TEST1_CARDS
@@ -1795,7 +1805,9 @@
       ' 门 · 通过 ≤ ' + prob.limit + ' 门。晶体管：每放一个 NAND 门花 1 个，删门退回 1 个。' +
       (SAVE.passed[prob.id] ? ' 已通过：最佳 ' + SAVE.passed[prob.id].gates + ' 门 · ' + SAVE.passed[prob.id].stars + ' 星。' : '') +
       '<span class="star-bar" title="当前 ' + gates + ' 门，3 星线 ' + prob.par + ' 门"><span class="star-fill" style="width:' + pct + '%"></span></span>' +
-      '<span class="hint">当前 ' + gates + ' 门 · 3 星线 ' + prob.par + ' 门</span>';
+      '<span class="hint">当前 ' + gates + ' 门 · 3 星线 ' + prob.par + ' 门</span>' +
+      '<br><span class="hint">总账：已通 ' + bestGatesTotal(SAVE).done + '/' + PROBLEMS.length + ' 道 · 你的最佳总门数 ' +
+      bestGatesTotal(SAVE).gates + ' · 标准解总门数 ' + parTotal() + '（par 合计）。</span>';
   }
 
   /* ================= 第二章：流片 ================= */
