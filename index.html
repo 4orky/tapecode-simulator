@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TapeCode 电路模拟器 — TapeOut × X Layer 黑客松原型</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>TapeCode 电路模拟器</h1>
+  <p class="sub">加载 TapeCode-Test1 NFT 的真实电路网表（tapnet/1），可视化 + 交互式仿真。
+  数据每次从链上 <code>baseURI()</code> 开始逐项 SHA-256 校验，信任根在链上，不硬编码目录指纹。</p>
+</header>
+
+<section class="panel" id="controls">
+  <label>Test1 编号 <input id="token-id" type="number" min="1" max="10000" value="1"></label>
+  <button id="btn-load">从链上加载</button>
+  <button id="btn-retry-live">重试实时拉取</button>
+  <span class="sep">|</span>
+  <span>本地缓存样本：</span>
+  <button data-sample="1">#1</button>
+  <button data-sample="100">#100</button>
+  <button data-sample="1000">#1000</button>
+  <button data-sample="3500">#3500</button>
+  <button data-sample="9999">#9999</button>
+  <span class="sep">|</span>
+  <button id="btn-beat">▶ 运行一拍（beat）</button>
+  <button id="btn-reset">重置</button>
+  <button id="btn-all1">输入全置 1</button>
+  <button id="btn-all0">输入全置 0</button>
+  <div id="status-line" class="status">初始化…</div>
+</section>
+
+<div id="error" class="error" style="display:none"></div>
+
+<section class="panel">
+  <h2>校验链（9 步，数据源：X Layer 合约 <code>0x0e91460D6823C711643e650A9a4C0cc21DE41614</code>）</h2>
+  <ol id="steps"><li class="step idle">等待加载…</li></ol>
+</section>
+
+<section class="panel">
+  <h2>电路信息</h2>
+  <div id="info"><p>未加载电路。</p></div>
+</section>
+
+<section class="panel">
+  <h2>仿真</h2>
+  <div id="inputs" class="io-row"></div>
+  <div id="outputs" class="io-row"></div>
+  <p class="hint">点输入引脚（图里或上方按钮）拨动输入，peek 即时刷新；「运行一拍」推进时钟、更新 LATCH 状态。
+  Test1 真实网表目前全是纯 NAND（0 个 LATCH），时序功能用 TAP-02 官方 toggle 向量验证过，见 REGRESSION.md。
+  线色沿用 Logisim：1 亮绿、0 暗绿。</p>
+</section>
+
+<section class="panel">
+  <h2>电路图</h2>
+  <div id="diagram" class="diagram"><p class="hint">加载中…</p></div>
+</section>
+
+<footer>
+  <p>原型说明：纯静态前端，不连钱包、不签名、不上链。取数链与格式见
+  <a href="../research/TECH_BRIEF.md">TECH_BRIEF.md</a>；回归结果见
+  <a href="REGRESSION.md">REGRESSION.md</a>。网表格式 TAP-02（CC0）、参考实现 MIT；
+  布局按官方查看页「最长路径分层 + 重心排序」的思路自行实现。</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
