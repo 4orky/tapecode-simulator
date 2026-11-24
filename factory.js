@@ -1115,6 +1115,8 @@
     $('res-bem').textContent = SAVE.bem.toFixed(2);
     $('res-day').textContent = SAVE.day;
     $('res-stars').textContent = totalStars(SAVE);
+    var max = $('res-stars-max');
+    if (max) max.textContent = PROBLEMS.length * 3; // 满星 = 题数 × 3（曾写死 /9，题库扩到 6 道后过期）
   }
 
   var VIEWS = ['town', 'prologue', 'ch1', 'tapeout', 'mining', 'market', 'cpu', 'factory', 'test1', 'codex', 'sim'];

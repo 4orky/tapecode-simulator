@@ -698,6 +698,17 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
   check('图鉴审计：29 条里能按 id 找到开厂条目', F.CODEX.some(e => e.id === 'factory-open'));
 }
 
+// ---------- 26. HUD 星星满分（第 22 轮） ----------
+{
+  check('星星满分 = 题数 × 3 = 18', F.PROBLEMS.length * 3 === 18);
+  const save = F.defaultSave();
+  save.stars = { fa: 3, adder4: 3, maj: 2 };
+  check('星星合计：3+3+2 = 8', F.totalStars(save) === 8);
+  const full = F.defaultSave();
+  F.PROBLEMS.forEach(p => { full.stars[p.id] = 3; });
+  check('星星合计：6 道题全 3 星 = 18', F.totalStars(full) === 18);
+}
+
 console.log('\n' + lines.join('\n'));
 console.log(`\n合计：${pass} 通过 / ${fail} 失败`);
 process.exit(fail ? 1 : 0);
