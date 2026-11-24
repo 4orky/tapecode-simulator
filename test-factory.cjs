@@ -255,7 +255,7 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
     s.nand === 200 && s.latch === 20 && s.bem === 0 && s.day === 0);
   check('存档默认：全网权重 100000', s.totalWeight === 100000);
   check('图鉴条目数', F.CODEX.length === 26, F.CODEX.length + ' 条');
-  check('三道真题都在', F.PROBLEMS.length === 3 && F.PROBLEMS.map(p => p.id).join(',') === 'fa,adder4,maj');
+  check('四道真题都在', F.PROBLEMS.length === 4 && F.PROBLEMS.map(p => p.id).join(',') === 'fa,adder4,maj,shifter');
 }
 
 // ---------- 12. 集市（第四章，P1） ----------
@@ -492,6 +492,43 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
     runCircuit(block, 6).every(s => s === '0000011001100000'));
   check('生命游戏：滑翔机 6 代与参考实现一致',
     runCircuit(glider, 6).join('|') === runRef(glider, 6).join('|'));
+}
+
+// ---------- 17. 图片离线 fallback（第 6 轮） ----------
+{
+  const ph1000 = F.test1Placeholder(1000);
+  check('占位图：SVG data URI', ph1000.indexOf('data:image/svg+xml,') === 0);
+  const dec1000 = decodeURIComponent(ph1000.slice('data:image/svg+xml,'.length));
+  check('占位图：含编号与离线说明', dec1000.indexOf('Test1 #1000') >= 0 && dec1000.indexOf('图片离线') >= 0);
+  const dec1 = decodeURIComponent(F.test1Placeholder(1).slice('data:image/svg+xml,'.length));
+  check('占位图：编号按卡区分', dec1.indexOf('Test1 #1</text>') >= 0 && dec1.indexOf('Test1 #1000') < 0);
+}
+
+// ---------- 18. 第四道真题：桶形移位器（第 7 轮） ----------
+{
+  const prob = F.problemById('shifter');
+  check('移位器：题在库里（6 入 4 出）', prob && prob.nIn === 6 && prob.nOut === 4 && prob.par === 26);
+  const t = prob.truth;
+  check('移位器：d=1011 移 0 位不变', t([1, 1, 0, 1, 0, 0]).join('') === '1101');
+  check('移位器：d=1011 移 1 位 = 0110', t([1, 1, 0, 1, 1, 0]).join('') === '0110');
+  check('移位器：d=1011 移 2 位 = 1100', t([1, 1, 0, 1, 0, 1]).join('') === '0011');
+  check('移位器：d=1011 移 3 位 = 1000', t([1, 1, 0, 1, 1, 1]).join('') === '0001');
+  check('移位器：d=0001 移 3 位 = 1000', t([1, 0, 0, 0, 1, 1]).join('') === '0001');
+  // 26 门参考解（两级移位：先按 s0 移 0/1 位，再按 s1 移 0/2 位；每级 4 个 3 门 MUX + 共享 NOT）
+  const d = F.newDraft('shifter');
+  function nand(a, b) { const g = F.addGate(d, 0, 0, 0); g.in0 = a; g.in1 = b; return G(g.id); }
+  function mux(sel, nsel, a, b) { return nand(nand(a, nsel), nand(b, sel)); }
+  const ns0 = nand(I(4), I(4));
+  const ns1 = nand(I(5), I(5));
+  const tt = [];
+  for (let i = 0; i < 4; i++) tt.push(mux(I(4), ns0, I(i), i === 0 ? C(0) : I(i - 1)));
+  const yy = [];
+  for (let i = 0; i < 4; i++) yy.push(mux(I(5), ns1, tt[i], i < 2 ? C(0) : tt[i - 2]));
+  d.outputs = yy;
+  check('移位器：参考解 26 门', d.gates.length === 26);
+  const v = F.verifyTruthTable(d);
+  check('移位器：参考解真值表 64/64', v.ok && v.passed === 64, v.ok ? '' : v.reason);
+  check('移位器：26 门 = par，3 星', F.starFor(26, 26, 32) === 3);
 }
 
 console.log('\n' + lines.join('\n'));

@@ -243,6 +243,15 @@ button:active { transform: scale(0.96); }
 .life-cell { width: 56px; height: 56px; border-radius: 8px; border: 2px solid #1e3a5f; background: #0f2033; cursor: pointer; padding: 0; }
 .life-cell.alive { background: #37d13a; border-color: #bbf7d0; box-shadow: 0 0 12px rgba(55, 209, 58, 0.7); }
 
+/* ---- 小镇天际线与建筑分类配色（第 6 轮） ---- */
+.town-skyline { margin: 6px 0 4px; border-radius: 10px; overflow: hidden; border: 1px solid #1e3a5f; }
+.town-skyline svg { display: block; width: 100%; height: 72px; background: linear-gradient(180deg, #0a1622, #0f2033); }
+.building[data-cat="design"] { border-top: 3px solid #37d13a; }
+.building[data-cat="mine"] { border-top: 3px solid #f5c542; }
+.building[data-cat="trade"] { border-top: 3px solid #a78bfa; }
+.building[data-cat="cpu"] { border-top: 3px solid #38bdf8; }
+.building[data-cat="cards"] { border-top: 3px solid #f472b6; }
+
 /* ---- 移动端适配 ---- */
 @media (max-width: 720px) {
   body { padding: 10px; }

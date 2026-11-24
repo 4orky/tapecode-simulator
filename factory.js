@@ -101,6 +101,19 @@
         return [((inp[0] + inp[1] + inp[2]) >= 2) ? 1 : 0];
       },
       par: 6, limit: 9, rows: 'all'
+    },
+    {
+      id: 'shifter', name: '桶形移位器', sub: 'PoD 真题 · 267 道题库之一',
+      teach: '桶形移位器：4 位数据 d3d2d1d0 左移 s 位（s = s0 + 2×s1，0–3 位），移出去的丢掉，右边补 0。诀窍是分两级移：先按 s0 移 0 或 1 位，再按 s1 移 0 或 2 位——每级 4 个选择器，26 个 NAND 门是标准做法。',
+      nIn: 6, inNames: ['d0', 'd1', 'd2', 'd3', 's0', 's1'],
+      nOut: 4, outNames: ['y0', 'y1', 'y2', 'y3'],
+      truth: function (inp) {
+        var d = inp[0] | (inp[1] << 1) | (inp[2] << 2) | (inp[3] << 3);
+        var s = inp[4] + 2 * inp[5];
+        var y = (d << s) & 0xF;
+        return [y & 1, (y >> 1) & 1, (y >> 2) & 1, (y >> 3) & 1];
+      },
+      par: 26, limit: 32, rows: 'all'
     }
   ];
   function problemById(id) {
@@ -1016,6 +1029,7 @@
     relayEncryptDemo: relayEncryptDemo, lotteryParticipants: lotteryParticipants,
     lotteryDraw: lotteryDraw, lotteryEnter: lotteryEnter,
     marketUnlocked: marketUnlocked, cpuUnlocked: cpuUnlocked,
+    test1Placeholder: test1Placeholder,
     buildCounterCircuit: buildCounterCircuit, counterValue: counterValue,
     LIFE_N: LIFE_N, LIFE_CELLS: LIFE_CELLS, lifeIndex: lifeIndex, lifeNeighbors: lifeNeighbors,
     LIFE_PRESETS: LIFE_PRESETS, buildLifeCircuit: buildLifeCircuit,
@@ -1087,22 +1101,22 @@
 
   /* ================= 小镇地图 ================= */
   var BUILDINGS = [
-    { id: 'prologue', name: '设计台', desc: '序章 · 两块积木', icon: '▣', open: function () { return true; }, hint: '认识 NAND 与 LATCH：拨开关，看信号流' },
-    { id: 'ch1', name: '任务板', desc: '第一章 · 接单', icon: '▤', open: function () { return !!SAVE.visited.prologue; }, lock: '先去设计台逛逛' },
-    { id: 'tapeout', name: '流片厂', desc: '第二章 · 流片', icon: '⬡', open: function () { return Object.keys(SAVE.passed).length > 0; }, lock: '先通过一道题（任务板）' },
-    { id: 'mining', name: '矿场', desc: '第三章 · 挖 BEM', icon: '⛏', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
-    { id: 'market', name: '集市', desc: '第四章 · 花 BEM', icon: '🏪', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
-    { id: 'cpu', name: 'CPU 神殿', desc: '终章 · 点亮 CPU', icon: '🖥️', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
-    { id: 'factory', name: '处理器工厂', desc: '第五章 · 开厂', icon: '🏭', open: function () { return SAVE.cpu.lit; }, lock: '先点亮 CPU（神殿）' },
-    { id: 'test1', name: '卡片馆', desc: 'Test1 图鉴 · 真实网表', icon: '▦', open: function () { return true; }, hint: '5 张真实 Test1 电路卡，可进模拟器玩' },
-    { id: 'codex', name: '图鉴', desc: '生态全景', icon: '▧', open: function () { return true; }, hint: '每遇到一个新组件，图鉴亮一条' }
+    { id: 'prologue', name: '设计台', desc: '序章 · 两块积木', icon: '▣', cat: 'design', open: function () { return true; }, hint: '认识 NAND 与 LATCH：拨开关，看信号流' },
+    { id: 'ch1', name: '任务板', desc: '第一章 · 接单', icon: '▤', cat: 'design', open: function () { return !!SAVE.visited.prologue; }, lock: '先去设计台逛逛' },
+    { id: 'tapeout', name: '流片厂', desc: '第二章 · 流片', icon: '⬡', cat: 'design', open: function () { return Object.keys(SAVE.passed).length > 0; }, lock: '先通过一道题（任务板）' },
+    { id: 'mining', name: '矿场', desc: '第三章 · 挖 BEM', icon: '⛏', cat: 'mine', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
+    { id: 'market', name: '集市', desc: '第四章 · 花 BEM', icon: '🏪', cat: 'trade', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
+    { id: 'cpu', name: 'CPU 神殿', desc: '终章 · 点亮 CPU', icon: '🖥️', cat: 'cpu', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
+    { id: 'factory', name: '处理器工厂', desc: '第五章 · 开厂', icon: '🏭', cat: 'trade', open: function () { return SAVE.cpu.lit; }, lock: '先点亮 CPU（神殿）' },
+    { id: 'test1', name: '卡片馆', desc: 'Test1 图鉴 · 真实网表', icon: '▦', cat: 'cards', open: function () { return true; }, hint: '5 张真实 Test1 电路卡，可进模拟器玩' },
+    { id: 'codex', name: '图鉴', desc: '生态全景', icon: '▧', cat: 'cards', open: function () { return true; }, hint: '每遇到一个新组件，图鉴亮一条' }
   ];
   function renderTown() {
     var wrap = $('town-grid');
     wrap.innerHTML = BUILDINGS.map(function (b) {
       var ok = b.open();
       var visited = !!SAVE.visited[b.id];
-      return '<button class="building' + (ok ? '' : ' locked') + (visited ? ' lit' : '') + '" data-b="' + b.id + '"' + (ok ? '' : ' disabled') + '>' +
+      return '<button class="building' + (ok ? '' : ' locked') + (visited ? ' lit' : '') + '" data-b="' + b.id + '" data-cat="' + (b.cat || '') + '"' + (ok ? '' : ' disabled') + '>' +
         '<span class="b-icon">' + b.icon + '</span>' +
         '<span class="b-name">' + b.name + (visited ? ' ✓' : '') + '</span>' +
         '<span class="b-desc">' + b.desc + '</span>' +
@@ -2193,11 +2207,27 @@
     refreshHud();
   }
 
+  /* ================= 视觉打磨 2：图片离线 fallback（第 6 轮） ================= */
+  // Test1 卡图是远程图片，离线/挂了会破图。fallback 是一张内联 SVG data URI
+  //（蓝图底 + 芯片框 + 编号），不依赖网络；网表数据本身不受影响（文案写明）。
+  function test1Placeholder(id) {
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="360" height="200" viewBox="0 0 360 200">' +
+      '<rect width="360" height="200" fill="#0f2033"/>' +
+      '<g stroke="#1e3a5f" stroke-width="1">' +
+      '<line x1="0" y1="50" x2="360" y2="50"/><line x1="0" y1="100" x2="360" y2="100"/><line x1="0" y1="150" x2="360" y2="150"/>' +
+      '<line x1="60" y1="0" x2="60" y2="200"/><line x1="120" y1="0" x2="120" y2="200"/><line x1="180" y1="0" x2="180" y2="200"/><line x1="240" y1="0" x2="240" y2="200"/><line x1="300" y1="0" x2="300" y2="200"/></g>' +
+      '<rect x="130" y="55" width="100" height="70" fill="none" stroke="#37d13a" stroke-width="2"/>' +
+      '<g fill="#37d13a"><rect x="118" y="78" width="12" height="6"/><rect x="118" y="96" width="12" height="6"/><rect x="230" y="78" width="12" height="6"/><rect x="230" y="96" width="12" height="6"/></g>' +
+      '<text x="180" y="155" fill="#f5c542" font-size="22" font-family="monospace" text-anchor="middle">Test1 #' + id + '</text>' +
+      '<text x="180" y="180" fill="#8fa8c4" font-size="12" font-family="monospace" text-anchor="middle">图片离线 · 网表数据不受影响</text></svg>';
+    return 'data:image/svg+xml,' + encodeURIComponent(svg);
+  }
+
   /* ================= 卡片馆：Test1 图鉴 ================= */
   function renderTest1() {
     var wrap = $('test1-grid');
     wrap.innerHTML = TEST1_CARDS.map(function (c) {
-      return '<div class="t1-card"><img src="' + c.image + '" alt="Test1 #' + c.id + '" loading="lazy">' +
+      return '<div class="t1-card"><img src="' + c.image + '" alt="Test1 #' + c.id + '" loading="lazy" onerror="t1ImgFallback(this,' + c.id + ')">' +
         '<h3>Test1 #' + c.id + '</h3>' +
         '<p class="t1-ed">第 ' + c.editionIndex + ' / ' + c.of + ' 张 · ' + rarityOf(c.of).name + '</p>' +
         '<p>' + c.nand + ' NAND · ' + c.nIn + ' 入 ' + c.nOut + ' 出 · ' + c.latch + ' LATCH</p>' +
@@ -2352,6 +2382,11 @@
 
   /* ================= 启动 ================= */
   function init() {
+    // 卡图离线 fallback（内联 onerror 用，全局只暴露这一个函数）
+    window.t1ImgFallback = function (img, id) {
+      img.onerror = null;
+      img.src = test1Placeholder(id);
+    };
     // 导航
     Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (b) {
       b.onclick = function () { switchView(b.getAttribute('data-nav')); };

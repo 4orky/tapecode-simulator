@@ -43,6 +43,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   check('小镇：旅程 7 步', qa('.j-step').length === 7);
   check('小镇：下一步引导指向设计台', /设计台/.test(q('#next-step').textContent));
   check('小镇：里程碑 10 个', qa('.ms-chip').length === 10);
+  check('小镇：天际线已画', !!q('.town-skyline svg'));
+  check('小镇：建筑有分类配色（矿场 data-cat=mine）', !!q('.building[data-cat="mine"]'));
   check('小镇：HUD 初始 200 NAND / 0 游戏 BEM',
     q('#res-nand').textContent === '200' && q('#res-bem').textContent === '0.00');
 
@@ -73,7 +75,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // ---------- 第一章：画 9 门全加器（全程点 UI） ----------
   nav('ch1');
   await sleep(200);
-  check('第一章：3 道题标签', qa('.ptab').length === 3);
+  check('第一章：4 道题标签', qa('.ptab').length === 4);
   for (let i = 0; i < 9; i++) click(q('#btn-add-gate'));
   await sleep(100);
   check('第一章：点了 9 次加门，画布 9 门，晶体管 191',
@@ -227,6 +229,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   nav('test1');
   await sleep(300);
   check('卡片馆：5 张 Test1 卡', qa('.t1-card').length === 5);
+  check('卡片馆：图片有离线 fallback（onerror）',
+    (q('.t1-card img').getAttribute('onerror') || '').indexOf('t1ImgFallback') >= 0);
   click(q('[data-play="1000"]'));
   await sleep(2500);
   check('模拟器：本地样本 #1000 已加载', /已加载/.test(q('#sim-status').textContent), q('#sim-status').textContent);
