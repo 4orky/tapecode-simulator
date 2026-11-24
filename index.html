@@ -3,68 +3,119 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TapeCode 电路模拟器 — TapeOut × X Layer 黑客松原型</title>
+<title>链上造芯厂 — TapeOut · From One NAND to a CPU</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header>
-  <h1>TapeCode 电路模拟器</h1>
-  <p class="sub">加载 TapeCode-Test1 NFT 的真实电路网表（tapnet/1），可视化 + 交互式仿真。
-  数据每次从链上 <code>baseURI()</code> 开始逐项 SHA-256 校验，信任根在链上，不硬编码目录指纹。</p>
+  <h1>链上造芯厂 <span class="en">TapeOut — From One NAND to a CPU</span></h1>
+  <p class="sub">把芯片制造搬上区块链：用代币做晶体管，在浏览器里设计数字电路，流片成链上电路 NFT，再按设计质量挖 BEM。玩着玩着，你就明白 TapeOut 在干什么。</p>
+  <div id="hud" class="hud">
+    <span>晶体管 NAND <b id="res-nand">200</b></span>
+    <span>LATCH <b id="res-latch">20</b></span>
+    <span>游戏 BEM <b id="res-bem">0.00</b> <i class="game-tag">游戏币，不是真实 BEM</i></span>
+    <span>第 <b id="res-day">0</b> 天</span>
+    <span>⭐ <b id="res-stars">0</b>/9</span>
+  </div>
+  <nav id="main-nav">
+    <button data-nav="town" class="active">🏘 小镇地图</button>
+    <button data-nav="prologue">设计台</button>
+    <button data-nav="ch1">任务板</button>
+    <button data-nav="tapeout">流片厂</button>
+    <button data-nav="mining">矿场</button>
+    <button data-nav="test1">卡片馆</button>
+    <button data-nav="codex">图鉴</button>
+  </nav>
+  <p id="status-line" class="status">初始化…</p>
 </header>
 
-<section class="panel" id="controls">
-  <label>Test1 编号 <input id="token-id" type="number" min="1" max="10000" value="1"></label>
-  <button id="btn-load">从链上加载</button>
-  <button id="btn-retry-live">重试实时拉取</button>
-  <span class="sep">|</span>
-  <span>本地缓存样本：</span>
-  <button data-sample="1">#1</button>
-  <button data-sample="100">#100</button>
-  <button data-sample="1000">#1000</button>
-  <button data-sample="3500">#3500</button>
-  <button data-sample="9999">#9999</button>
-  <span class="sep">|</span>
-  <button id="btn-beat">▶ 运行一拍（beat）</button>
-  <button id="btn-reset">重置</button>
-  <button id="btn-all1">输入全置 1</button>
-  <button id="btn-all0">输入全置 0</button>
-  <div id="status-line" class="status">初始化…</div>
-</section>
+<main>
+  <section id="view-town" class="view">
+    <h2>生态小镇</h2>
+    <p>小镇里的每栋建筑都是 TapeOut 生态的一个组件。去过的地方会亮灯。按这个顺序走一圈，你就走完了整个生态：</p>
+    <div id="journey" class="journey"></div>
+    <div id="town-grid" class="town-grid"></div>
+  </section>
 
-<div id="error" class="error" style="display:none"></div>
+  <section id="view-prologue" class="view" style="display:none">
+    <h2>序章 · 两块积木</h2>
+    <p>整个 TapeOut 生态只用两块积木：<b>NAND 负责算，LATCH 负责记</b>。拨动开关，看信号沿着线流动——线色沿用 Logisim：1 是亮绿，0 是暗绿。</p>
+    <div id="prologue-list"></div>
+  </section>
 
-<section class="panel">
-  <h2>校验链（9 步，数据源：X Layer 合约 <code>0x0e91460D6823C711643e650A9a4C0cc21DE41614</code>）</h2>
-  <ol id="steps"><li class="step idle">等待加载…</li></ol>
-</section>
+  <section id="view-ch1" class="view" style="display:none">
+    <h2>第一章 · 接单：PoD 真题</h2>
+    <p>这是真实的 PoD（Proof of Design）题目：客户要的电路，你用 NAND 门搭出来，真值表全过才算交货。门越少，星越多——真实的 PoD 奖励也是按门数算权重的。</p>
+    <div id="ch1-tabs" class="ptabs"></div>
+    <p id="ch1-teach" class="teach"></p>
+    <p id="ch1-meta" class="hint"></p>
+    <div class="toolbar">
+      <button id="btn-add-gate" class="btn-primary">+ 添加 NAND 门（1 晶体管）</button>
+      <button id="btn-verify" class="btn-primary">✓ 验货（跑真值表）</button>
+      <button id="btn-to-tapeout">去流片 →</button>
+      <button id="btn-clear-draft">清空画布</button>
+      <span id="gate-count" class="hint"></span>
+    </div>
+    <p class="hint">连线方法：先点一个信号源（左侧输入脚 / 常量 / 某个门的输出小圆点），再点目标引脚；点一条已有的线可以删掉它；拖动门身可移动位置。输出脚是终点：接了输出脚的门不能再分给别的门。</p>
+    <div id="builder-canvas" class="builder-canvas"></div>
+    <div id="gate-tools" class="gate-tools"></div>
+    <h3>实时信号</h3>
+    <div id="sim-strip" class="io-row"></div>
+    <h3>真值表验货</h3>
+    <div id="tt-panel"></div>
+  </section>
 
-<section class="panel">
-  <h2>电路信息</h2>
-  <div id="info"><p>未加载电路。</p></div>
-</section>
+  <section id="view-tapeout" class="view" style="display:none">
+    <h2>第二章 · 流片厂</h2>
+    <p>真值表全过的电路可以流片：把草稿上的门烧进芯片，变成一张改不了的电路卡。草稿会被烧掉——和真芯片一样，流片之后就不能改了。</p>
+    <div id="tapeout-list"></div>
+    <h3>我的电路卡</h3>
+    <div id="taped-grid" class="nft-grid"></div>
+  </section>
 
-<section class="panel">
-  <h2>仿真</h2>
-  <div id="inputs" class="io-row"></div>
-  <div id="outputs" class="io-row"></div>
-  <p class="hint">点输入引脚（图里或上方按钮）拨动输入，peek 即时刷新；「运行一拍」推进时钟、更新 LATCH 状态。
-  Test1 真实网表目前全是纯 NAND（0 个 LATCH），时序功能用 TAP-02 官方 toggle 向量验证过，见 REGRESSION.md。
-  线色沿用 Logisim：1 亮绿、0 暗绿。</p>
-</section>
+  <section id="view-mining" class="view" style="display:none">
+    <h2>第三章 · 矿场</h2>
+    <p>把流片卡注册成矿机，选一台处理器，每天按权重分 BEM。游戏里的 BEM 是<b>游戏币，不是真实 BEM</b>，不能提现、不能兑换。</p>
+    <div id="mining-list"></div>
+  </section>
 
-<section class="panel">
-  <h2>电路图</h2>
-  <div id="diagram" class="diagram"><p class="hint">加载中…</p></div>
-</section>
+  <section id="view-test1" class="view" style="display:none">
+    <h2>卡片馆 · Test1 真实网表图鉴</h2>
+    <p class="hint">下面是 5 张真实的 TapeCode-Test1 电路卡：编号、门数、稀有度、网表 SHA-256 都是链上核对过的真数据（快照 2026-11-24）。网表是随机分配的，不是 PoD 题的标准答案。</p>
+    <p id="test1-note" class="hint"></p>
+    <div id="test1-grid" class="t1-grid"></div>
+  </section>
+
+  <section id="view-sim" class="view" style="display:none">
+    <h2>模拟器 · 真实网表</h2>
+    <button id="sim-back">← 回卡片馆</button>
+    <div class="sim-top">
+      <label>Test1 编号 <input id="sim-token" type="number" min="1" max="10000" value="1"></label>
+      <button id="sim-load-live" class="btn-primary">从链上加载（9 步校验）</button>
+      <button id="sim-load-local">加载本地样本</button>
+    </div>
+    <p id="sim-status" class="status"></p>
+    <ol id="sim-steps" class="steps"></ol>
+    <div id="sim-info"></div>
+    <div id="sim-controls" class="io-row"></div>
+    <div id="sim-board" class="diagram"></div>
+  </section>
+
+  <section id="view-codex" class="view" style="display:none">
+    <h2>图鉴 · 生态全景</h2>
+    <p id="codex-progress" class="hint"></p>
+    <div id="codex-grid" class="codex-grid"></div>
+  </section>
+</main>
 
 <footer>
-  <p>原型说明：纯静态前端，不连钱包、不签名、不上链。取数链与格式见
-  <a href="../research/TECH_BRIEF.md">TECH_BRIEF.md</a>；回归结果见
-  <a href="REGRESSION.md">REGRESSION.md</a>。网表格式 TAP-02（CC0）、参考实现 MIT；
-  布局按官方查看页「最长路径分层 + 重心排序」的思路自行实现。</p>
+  <p id="honesty" class="honesty"></p>
+  <p class="hint">数据源：X Layer 链上 TapeCode-Test1 合约 <code>0x0e91460D6823C711643e650A9a4C0cc21DE41614</code>；网表每次从链上 baseURI() 起步逐项 SHA-256 校验，失败时回本地样本并明说。快照时间 2026-11-24。回归报告见 REGRESSION.md。</p>
 </footer>
 
+<div id="modal-root" style="display:none"></div>
 <script src="app.js"></script>
+<script src="schematic.js"></script>
+<script src="factory.js"></script>
 </body>
 </html>
