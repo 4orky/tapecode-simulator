@@ -125,6 +125,19 @@
         return [a > b ? 1 : 0, a === b ? 1 : 0, a < b ? 1 : 0];
       },
       par: 34, limit: 40, rows: 'all'
+    },
+    {
+      id: 'sbox', name: 'S 盒', sub: 'PoD 真题 · 267 道题库之一',
+      teach: 'S 盒是密码学里的置换盒：4 位输入查表换成 4 位输出（PRESENT 密码的 S 盒），没有固定公式，只能按输入一位一位选。标准做法是 4 级选择器树：每级按一位输入二选一，16 个常数里选一个；四个输出位共用同一棵树的选择信号，184 个 NAND 门是标准做法。',
+      nIn: 4, inNames: ['d0', 'd1', 'd2', 'd3'],
+      nOut: 4, outNames: ['y0', 'y1', 'y2', 'y3'],
+      truth: function (inp) {
+        var sbox = [0xC, 0x5, 0x6, 0xB, 0x9, 0x0, 0xA, 0xD, 0x3, 0xE, 0xF, 0x8, 0x4, 0x7, 0x1, 0x2];
+        var x = inp[0] | (inp[1] << 1) | (inp[2] << 2) | (inp[3] << 3);
+        var y = sbox[x];
+        return [y & 1, (y >> 1) & 1, (y >> 2) & 1, (y >> 3) & 1];
+      },
+      par: 184, limit: 240, rows: 'all'
     }
   ];
   function problemById(id) {

@@ -89,7 +89,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // ---------- 第一章：画 9 门全加器（全程点 UI） ----------
   nav('ch1');
   await sleep(200);
-  check('第一章：5 道题标签', qa('.ptab').length === 5);
+  check('第一章：6 道题标签', qa('.ptab').length === 6);
   for (let i = 0; i < 9; i++) click(q('#btn-add-gate'));
   await sleep(100);
   check('第一章：点了 9 次加门，画布 9 门，晶体管 191',

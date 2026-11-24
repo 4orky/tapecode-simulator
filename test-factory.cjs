@@ -255,7 +255,7 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
     s.nand === 200 && s.latch === 20 && s.bem === 0 && s.day === 0);
   check('存档默认：全网权重 100000', s.totalWeight === 100000);
   check('图鉴条目数', F.CODEX.length === 26, F.CODEX.length + ' 条');
-  check('五道真题都在', F.PROBLEMS.length === 5 && F.PROBLEMS.map(p => p.id).join(',') === 'fa,adder4,maj,shifter,cmp2');
+  check('六道真题都在', F.PROBLEMS.length === 6 && F.PROBLEMS.map(p => p.id).join(',') === 'fa,adder4,maj,shifter,cmp2,sbox');
 }
 
 // ---------- 12. 集市（第四章，P1） ----------
@@ -639,6 +639,42 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
   old.miners = [{ cardId: 'c1', processor: 'tapeout' }];
   F.settleDay(old);
   check('账本：老存档无 ledger 字段也能记', Array.isArray(old.ledger) && old.ledger.length === 1);
+}
+
+// ---------- 23. 第六道真题：S 盒（第 14 轮） ----------
+{
+  const prob = F.problemById('sbox');
+  check('S 盒：题在库里（4 入 4 出）', prob && prob.nIn === 4 && prob.nOut === 4 && prob.par === 184);
+  const t = prob.truth;
+  check('S 盒：S(0)=C → 0011', t([0, 0, 0, 0]).join('') === '0011');
+  check('S 盒：S(5)=0 → 0000', t([1, 0, 1, 0]).join('') === '0000');
+  check('S 盒：S(15)=2 → 0100', t([1, 1, 1, 1]).join('') === '0100');
+  check('S 盒：S(1)=5 → 1010', t([1, 0, 0, 0]).join('') === '1010');
+  check('S 盒：S(10)=F → 1111', t([0, 1, 0, 1]).join('') === '1111');
+  // 184 门参考解：4 级 MUX 树，每位输出一棵树，4 个 NOT（选择信号）跨位共享
+  const SBOX = [0xC, 0x5, 0x6, 0xB, 0x9, 0x0, 0xA, 0xD, 0x3, 0xE, 0xF, 0x8, 0x4, 0x7, 0x1, 0x2];
+  const d = F.newDraft('sbox');
+  function nand(a, b) { const g = F.addGate(d, 0, 0, 0); g.in0 = a; g.in1 = b; return G(g.id); }
+  function not(a) { return nand(a, a); }
+  function mux(a, b, s, ns) { return nand(nand(a, s), nand(b, ns)); }
+  const nsel = [not(I(0)), not(I(1)), not(I(2)), not(I(3))];
+  const outs = [];
+  for (let bit = 0; bit < 4; bit++) {
+    let level = [];
+    for (let i = 0; i < 16; i++) level.push(C((SBOX[i] >> bit) & 1));
+    for (let lvl = 0; lvl < 4; lvl++) {
+      const next = [];
+      for (let j = 0; j < level.length; j += 2) next.push(mux(level[j + 1], level[j], I(lvl), nsel[lvl]));
+      level = next;
+    }
+    outs.push(level[0]);
+  }
+  d.outputs = outs;
+  check('S 盒：参考解 184 门', d.gates.length === 184);
+  const v = F.verifyTruthTable(d);
+  check('S 盒：参考解真值表 16/16', v.ok && v.passed === 16, v.ok ? '' : v.reason);
+  check('S 盒：184 门 = par，3 星', F.starFor(184, 184, 240) === 3);
+  check('S 盒：朴素 MUX 树 240 门仍在 limit 内，1 星', F.starFor(240, 184, 240) === 1);
 }
 
 console.log('\n' + lines.join('\n'));
