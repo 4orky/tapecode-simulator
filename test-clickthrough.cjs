@@ -28,6 +28,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   });
   const { window } = dom;
   const { document } = window;
+  // 全程错误陷阱（第 26 轮）：流程里任何未捕获的 JS 异常都记下来，最后断言为 0
+  const windowErrors = [];
+  window.addEventListener('error', e => windowErrors.push(e.message || String(e.error || e)));
   await new Promise(res => { if (window.document.readyState === 'complete') res(); else window.addEventListener('load', res); });
   await sleep(500);
 
@@ -350,6 +353,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // 图鉴渲染审计（第 19 轮）：正文须是条目 what，不能出现 "undefined"
   check('图鉴：已解锁卡片正文不是 undefined', !/undefined/.test(q('#codex-grid').textContent));
   check('图鉴：NAND 条目正文在位', /函数完备/.test(q('#codex-grid').textContent));
+
+  // 全程错误陷阱（第 26 轮）：整个流程跑下来，window 上不能有未捕获的 JS 异常
+  check('全程无未捕获 JS 异常', windowErrors.length === 0, windowErrors.join(' | '));
 
   console.log('\n' + lines.join('\n'));
   console.log(`\n合计：${pass} 通过 / ${fail} 失败`);
