@@ -173,6 +173,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   check('第一章：触屏拖门，x +50 且 y 下移、已存档',
     gx1 === Math.min(940, gx0 + 50) && gy1 > gy0,
     '由 (' + gx0 + ',' + gy0 + ') → (' + gx1 + ',' + gy1 + ')');
+  // 画布触摸规则（第 32 轮）：画布可平移、门禁滚动
+  const cssText = await (await fetch('http://127.0.0.1:8123/style.css')).text();
+  check('第一章：画布 touch-action 是 pan-x pan-y、门是 none',
+    /svg\.bschem \{ touch-action: pan-x pan-y/.test(cssText) && /svg\.bschem \[data-gate\] \{ touch-action: none/.test(cssText));
 
   // ---------- 流片 ----------
   click(q('#btn-to-tapeout'));

@@ -247,7 +247,10 @@ button:active { transform: scale(0.96); }
 .ledger th, .ledger td { border: 1px solid #1e3a5f; padding: 4px 8px; text-align: right; }
 .ledger th:first-child, .ledger td:first-child { text-align: left; }
 .ledger th { background: #16283d; color: #f5c542; }
-svg.bschem { touch-action: none; } /* 画布拖拽时不让浏览器接管触摸去滚动页面（第 31 轮） */
+/* 画布触摸（第 31–32 轮）：画布本身允许平移滚动（手机上能滑到右边的门和输出脚），
+   只有门禁滚动——手指按在门上就是拖门，不会误滚页面。 */
+svg.bschem { touch-action: pan-x pan-y; }
+svg.bschem [data-gate] { touch-action: none; }
 .life-cell { width: 56px; height: 56px; border-radius: 8px; border: 2px solid #1e3a5f; background: #0f2033; cursor: pointer; padding: 0; }
 .life-cell.alive { background: #37d13a; border-color: #bbf7d0; box-shadow: 0 0 12px rgba(55, 209, 58, 0.7); }
 
