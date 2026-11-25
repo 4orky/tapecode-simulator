@@ -750,7 +750,7 @@
     if (!save.cpu.lit) return { target: 'cpu', text: '去 CPU 神殿：给 4 位 CPU 上电，跑满 16 拍点亮它。' };
     if (save.processors.length === 0) return { target: 'factory', text: '去处理器工厂：花 5 游戏 BEM 开自己的处理器，自己定晶体管价——但先看清长尾：389 台里 111 台 0 产出。' };
     if (!save.visited.test1) return { target: 'test1', text: '去卡片馆：玩 5 张真实 Test1 电路卡的网表。' };
-    return { target: 'codex', text: '通关了！去图鉴看看生态全景（29 条），或者继续优化电路、冲击更少门数。' };
+    return { target: 'codex', text: '通关了！去图鉴看看生态全景（35 条），或者继续优化电路、冲击更少门数。' };
   }
   function milestones(save) {
     return [
@@ -1030,7 +1030,25 @@
       unlock: 'ch1' },
     { id: 'life', name: '康威生命游戏', status: 'live', source: 'ECOSYSTEM §3.1 · Behemoth 标志性演示',
       what: 'CPU 的第二种程序：同一台 CPU，换一块电路跑生命游戏。规则只有三句：3 个邻居出生、2 个邻居存活，其余都死。4×4 是 1,600 个 NAND 门、6×6 是 3,600 个 NAND 门，都是真电路、真仿真。Behemoth 在链上跑生命游戏，是 TapeOut 生态的标志性演示。',
-      unlock: 'cpu' }
+      unlock: 'cpu' },
+    { id: 'tapeup', name: 'TapeUP', status: 'live', source: 'ECOSYSTEM §3.3',
+      what: '全链账本 + PoB（Proof-of-Burn）交易引擎：UP 只能用 BEM 买；30,000+ BEM 已锁定在 TapeUP（交易池 10,000+、Bid Reservoir 排队 9,000+、质押合约 14,000+）。TAI 就在此发行、与 BEM 配对。',
+      unlock: 'market' },
+    { id: 'tapeliquid', name: 'TAPELIQUID / Circuit Punk', status: 'live', source: 'ECOSYSTEM §3.3',
+      what: '生态里少数真把电路用起来、还有持续交易和销毁的第三方：交易台是生态唯一同时有现货 + 永续的市场，前端住在电路容器里。Circuit Punk 创世 NFT 共 1 万枚（TAP-721），每枚带一份完整网表 + SHA-256；目前 L0 阶段，电路暂不可调用。BOT 的收益说法未核实。',
+      unlock: 'test1' },
+    { id: 'tapestry', name: 'Tapestry', status: 'alpha', source: 'ECOSYSTEM §3.3',
+      what: '完全链上的社交应用：身份、帖子、互动、审核全在链上，前端住在电路容器里。2026-10-17–18 上线。',
+      unlock: 'market' },
+    { id: 'silicube', name: 'SiliCube（$CUBE）', status: 'alpha', source: 'ECOSYSTEM §3.3',
+      what: 'DeWEB 上的应用，经 TapeLaunch 发 $CUBE：烧 $CUBE 铸机器（官方叫 tape-out），一个区块后抽电路（官方叫校准）；电路越稀有、权重越高、分的 BNB 越多。4,444 台机器铸完后共烧掉 28.6% 总供应量。',
+      unlock: 'factory' },
+    { id: 'bemdraw', name: 'BEM-DRAW', status: 'alpha', source: 'ECOSYSTEM §3.3',
+      what: '抽奖逻辑写进 TapeOut 电路里、链上开奖验证：每玩一次 0.1 BEM，分创世会员 / 普通会员 / 参与者档位。连抽奖规则本身都是电路。',
+      unlock: 'market' },
+    { id: 'tapefour', name: 'TapeFour', status: 'alpha', source: 'ECOSYSTEM §3.3',
+      what: '与 Four.meme 合作的挖矿式发币：买晶体管 → 项目“毕业” → 发币（无团队份额）→ 再流片 5 个 NAND 门做成矿机来挖这个币。',
+      unlock: 'factory' }
   ];
   var STATUS_LABEL = { live: '✅ 已实现', alpha: '🧪 测试中', draft: '📝 草案', unverified: '❓ 未核实' };
   // 解锁条件的人话（第 24 轮）：锁定卡片以前直接显示内部 key（如“🔒 ch1”），用户看不懂

@@ -321,7 +321,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   click(q('#btn-cpu-share'));
   await sleep(100);
   check('CPU 神殿：分享文案含游戏链接', /4orky\.github\.io\/tapecode-simulator/.test(q('#cpu-share-msg').textContent), q('#cpu-share-msg').textContent);
-  check('CPU 神殿：分享文案含图鉴进度', /图鉴 \d+\/29 条/.test(q('#cpu-share-msg').textContent));
+  check('CPU 神殿：分享文案含图鉴进度', /图鉴 \d+\/35 条/.test(q('#cpu-share-msg').textContent));
 
   // ---------- 生命游戏（CPU 的第二种程序） ----------
   click(q('#btn-mode-life'));
@@ -441,7 +441,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // ---------- 图鉴 ----------
   nav('codex');
   await sleep(200);
-  check('图鉴：29 条', qa('.codex-card').length === 29);
+  check('图鉴：35 条', qa('.codex-card').length === 35);
   check('图鉴：已解锁进度显示', /已解锁/.test(q('#codex-progress').textContent), q('#codex-progress').textContent);
   // 图鉴渲染审计（第 19 轮）：正文须是条目 what，不能出现 "undefined"
   check('图鉴：已解锁卡片正文不是 undefined', !/undefined/.test(q('#codex-grid').textContent));

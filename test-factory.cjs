@@ -254,7 +254,7 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
   check('存档默认：200 NAND / 20 LATCH / 0 BEM',
     s.nand === 200 && s.latch === 20 && s.bem === 0 && s.day === 0);
   check('存档默认：全网权重 100000', s.totalWeight === 100000);
-  check('图鉴条目数', F.CODEX.length === 29, F.CODEX.length + ' 条');
+  check('图鉴条目数', F.CODEX.length === 35, F.CODEX.length + ' 条');
   check('六道真题都在', F.PROBLEMS.length === 6 && F.PROBLEMS.map(p => p.id).join(',') === 'fa,adder4,maj,shifter,cmp2,sbox');
 }
 
@@ -695,7 +695,9 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
   check('图鉴审计：每条都有名字与来源', F.CODEX.every(e => e.name && e.source));
   check('图鉴审计：解锁条件都在合法集合里',
     F.CODEX.every(e => ['always', 'prologue', 'ch1', 'tapeout', 'mining', 'test1', 'market', 'cpu', 'factory'].includes(e.unlock)));
-  check('图鉴审计：29 条里能按 id 找到开厂条目', F.CODEX.some(e => e.id === 'factory-open'));
+  check('图鉴审计：35 条里能按 id 找到开厂条目', F.CODEX.some(e => e.id === 'factory-open'));
+  check('图鉴审计：第 57 轮 6 条支线都在（TapeUP / TAPELIQUID / Tapestry / SiliCube / BEM-DRAW / TapeFour）',
+    ['tapeup', 'tapeliquid', 'tapestry', 'silicube', 'bemdraw', 'tapefour'].every(id => F.CODEX.some(e => e.id === id)));
 }
 
 // ---------- 26. HUD 星星满分（第 22 轮） ----------
