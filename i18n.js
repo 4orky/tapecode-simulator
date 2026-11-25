@@ -354,10 +354,11 @@
     return true;
   }
   // 单语言文件注册（第 59–61 轮）：i18n-ja/ko/es.js 各调一次 register。
-  // 若用户上次选的就是这门语言，注册完成后立即应用（脚本后加载的场景）。
+  // 合并式（第 62 轮）：图鉴等扩展词典（i18n-codex-*.js）可以后注册同一门语言的
+  // 追加 key，不会冲掉已有的基础词典。
   function register(l, dict) {
     if (!dict || typeof dict !== 'object') return false;
-    I18N[l] = dict;
+    I18N[l] = Object.assign({}, I18N[l], dict);
     buildLangSelect();
     var stored = null;
     try { stored = root.localStorage && root.localStorage.getItem(LS_KEY); } catch (e) {}

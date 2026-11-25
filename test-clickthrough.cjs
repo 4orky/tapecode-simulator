@@ -482,6 +482,21 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // 图鉴渲染审计（第 19 轮）：正文须是条目 what，不能出现 "undefined"
   check('图鉴：已解锁卡片正文不是 undefined', !/undefined/.test(q('#codex-grid').textContent));
   check('图鉴：NAND 条目正文在位', /函数完备/.test(q('#codex-grid').textContent));
+  // 图鉴翻译（第 62 轮）：切英文后条目名、正文、徽章、进度都变英文，切回中文恢复
+  q('#lang-select').value = 'en';
+  q('#lang-select').dispatchEvent(new window.Event('change', { bubbles: true }));
+  await sleep(200);
+  nav('codex');
+  await sleep(200);
+  check('图鉴：切英文后比较器变 Comparator', /Comparator/.test(q('#codex-grid').textContent) && !/比较器/.test(q('#codex-grid').textContent));
+  check('图鉴：切英文后状态徽章变英文', /✅ Live/.test(q('#codex-grid').textContent));
+  check('图鉴：切英文后解锁进度变英文', /Unlocked 35 \/ 35 entries/.test(q('#codex-progress').textContent));
+  q('#lang-select').value = 'zh';
+  q('#lang-select').dispatchEvent(new window.Event('change', { bubbles: true }));
+  await sleep(200);
+  nav('codex');
+  await sleep(200);
+  check('图鉴：切回中文后比较器恢复', /比较器/.test(q('#codex-grid').textContent));
 
   // 全程错误陷阱（第 26 轮）：整个流程跑下来，window 上不能有未捕获的 JS 异常
   check('全程无未捕获 JS 异常', windowErrors.length === 0, windowErrors.join(' | '));

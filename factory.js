@@ -2668,12 +2668,19 @@
   function renderCodex() {
     var unlocked = CODEX.filter(function (e) { return codexUnlocked(SAVE, e); });
     $('codex-progress').textContent = t('codex.progress', { n: unlocked.length, total: CODEX.length });
+    // 图鉴条目走 i18n 词典（第 62 轮）：某门语言没翻某条时回退中文原文，不显示 key。
+    var srcPre = t('codex.source'); if (srcPre === 'codex.source') srcPre = '来源：';
+    var lockPre = t('codex.lockHint'); if (lockPre === 'codex.lockHint') lockPre = '🔒 解锁条件：';
     $('codex-grid').innerHTML = CODEX.map(function (e) {
       var ok = codexUnlocked(SAVE, e);
+      var nm = t('codex.' + e.id + '.name'); if (nm === 'codex.' + e.id + '.name') nm = e.name;
+      var wh = t('codex.' + e.id + '.what'); if (wh === 'codex.' + e.id + '.what') wh = e.what;
+      var st = t('codex.status.' + e.status); if (st === 'codex.status.' + e.status) st = STATUS_LABEL[e.status];
+      var ul = t('codex.unlock.' + e.unlock); if (ul === 'codex.unlock.' + e.unlock) ul = codexUnlockLabel(e.unlock);
       return '<article class="codex-card' + (ok ? '' : ' locked') + '">' +
-        '<h3>' + esc(e.name) + ' ' + (ok ? '<span class="badge st-' + e.status + '">' + e.status + '</span>' : '🔒') + '</h3>' +
-        (ok ? '<p>' + esc(e.what) + '</p><p class="hint">来源：' + esc(e.source) + '</p>'
-          : '<p class="hint">🔒 解锁条件：' + esc(codexUnlockLabel(e.unlock)) + '</p>') +
+        '<h3>' + esc(nm) + ' ' + (ok ? '<span class="badge st-' + e.status + '">' + esc(st) + '</span>' : '🔒') + '</h3>' +
+        (ok ? '<p>' + esc(wh) + '</p><p class="hint">' + srcPre + esc(e.source) + '</p>'
+          : '<p class="hint">' + lockPre + esc(ul) + '</p>') +
         '</article>';
     }).join('');
   }

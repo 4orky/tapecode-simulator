@@ -771,6 +771,29 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
   check('i18n：切回中文', I18N.currentLang() === 'zh');
 }
 
+// ---------- 31. 图鉴翻译（第 62 轮） ----------
+{
+  const I18N = require('./i18n.js');
+  require('./i18n-ja.js'); require('./i18n-ko.js'); require('./i18n-es.js');
+  require('./i18n-codex-en.js'); require('./i18n-codex-ja.js'); require('./i18n-codex-ko.js'); require('./i18n-codex-es.js');
+  check('图鉴翻译：四语各 86 个 codex.* key',
+    ['en', 'ja', 'ko', 'es'].every(l => Object.keys(I18N.I18N[l]).filter(k => k.indexOf('codex.') === 0).length === 86));
+  check('图鉴翻译：35 条 name/what 全在',
+    ['en', 'ja', 'ko', 'es'].every(l => F.CODEX.every(e => I18N.I18N[l]['codex.' + e.id + '.name'] && I18N.I18N[l]['codex.' + e.id + '.what'])));
+  I18N.setLang('en');
+  check('图鉴翻译：英文比较器', I18N.t('codex.comparator.name') === 'Comparator');
+  check('图鉴翻译：英文状态徽章', I18N.t('codex.status.live') === '✅ Live');
+  check('图鉴翻译：英文解锁指引', I18N.t('codex.unlock.ch1') === 'Pass one problem on the Task Board');
+  I18N.setLang('ja');
+  check('图鉴翻译：日文比较器', I18N.t('codex.comparator.name') === 'コンパレーター');
+  I18N.setLang('ko');
+  check('图鉴翻译：韩文比较器', I18N.t('codex.comparator.name') === '비교기');
+  I18N.setLang('es');
+  check('图鉴翻译：西文比较器', I18N.t('codex.comparator.name') === 'Comparador');
+  I18N.setLang('zh');
+  check('图鉴翻译：中文回退（缺 key 返回 key）', I18N.t('codex.nonexistent.name') === 'codex.nonexistent.name');
+}
+
 console.log('\n' + lines.join('\n'));
 console.log(`\n合计：${pass} 通过 / ${fail} 失败`);
 process.exit(fail ? 1 : 0);
