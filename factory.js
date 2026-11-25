@@ -1619,8 +1619,9 @@
         '<text x="68" y="' + (y + 20) + '" text-anchor="middle" class="t-pin">' + esc(name) + '</text>' +
         '<rect x="38" y="' + (y + 28) + '" width="42" height="10" rx="5" class="sw-track"/>' +
         '<circle cx="' + (38 + (v ? 32 : 10)) + '" cy="' + (y + 33) + '" r="7" class="sw-knob ' + (v ? 'on' : 'off') + '"/>' +
+        '<circle cx="118" cy="' + (y + 26) + '" r="16" class="src-hit"/>' +
         '<circle cx="118" cy="' + (y + 26) + '" r="5" class="src-dot"/>' +
-        '<title>点击选为连线源（当前值 ' + v + '，拨动值在下方开关条）</title></g>';
+        '<title>点一下直接拨 0/1；点右侧小绿点选为连线源</title></g>';
     });
     // ---- 常量轨 ----
     [0, 1].forEach(function (cv) {
@@ -1629,6 +1630,7 @@
       s += '<g class="rail-pin' + (sel ? ' sel' : '') + '" data-src="c:' + cv + '">' +
         '<rect x="18" y="' + y + '" width="100" height="52" rx="6" class="rail-box"/>' +
         '<text x="68" y="' + (y + 30) + '" text-anchor="middle" class="t-pin">常量 ' + cv + '</text>' +
+        '<circle cx="118" cy="' + (y + 26) + '" r="16" class="src-hit"/>' +
         '<circle cx="118" cy="' + (y + 26) + '" r="5" class="src-dot"/>' +
         '<title>点击选为连线源</title></g>';
     });
@@ -1719,6 +1721,16 @@
       }
       if (rail) {
         var parts = rail.getAttribute('data-src').split(':');
+        // 第 64 轮：点输入框本体（开关、框、文字）直接拨 0/1；只有点右侧小绿点才选为连线源。
+        var dot = ev.target.closest ? ev.target.closest('.src-dot, .src-hit') : null;
+        if (!dot && parts[0] === 'i') {
+          var ii = +parts[1];
+          B.inputs[ii] = B.inputs[ii] ? 0 : 1;
+          B.verified = null;
+          drawBuilder(); drawSimStrip();
+          setStatus(draftProblem(B.draft).inNames[ii] + ' 已拨到 ' + B.inputs[ii] + '。');
+          return;
+        }
         B.selSrc = parts[0] === 'i' ? { k: 'i', idx: +parts[1] } : { k: 'c', v: +parts[1] };
         B.selGate = null;
         drawBuilder();

@@ -115,7 +115,7 @@
     'ch1.verify': '✓ Verificar (ejecutar tabla de verdad)',
     'ch1.toTapeout': 'Ir al tape-out →',
     'ch1.clear': 'Limpiar el lienzo',
-    'ch1.wiringHint': 'Cómo conectar: primero pulsa una fuente de señal (un pin de entrada de la izquierda, una constante o el punto de salida de una puerta) y luego el pin de destino; pulsa un cable existente para eliminarlo; arrastra el cuerpo de una puerta para moverla. Un pin de salida es el final de la línea: una puerta conectada a un pin de salida no puede alimentar a otra puerta.',
+    'ch1.wiringHint': 'Cómo conectar: pulsa un cuadro de entrada para cambiarlo entre 0 y 1; pulsa su punto verde de la derecha para elegirlo como fuente de señal y luego pulsa el pin de destino; pulsa un cable existente para eliminarlo; arrastra el cuerpo de una puerta para moverla. Un pin de salida es el final de la línea: una puerta conectada a un pin de salida no puede alimentar a otra puerta.',
     'ch1.liveSignals': 'Señales en vivo',
     'ch1.truthTable': 'Verificación con tabla de verdad',
     'sec.tapeout.title': 'Capítulo 2 · Fábrica de tape-out',

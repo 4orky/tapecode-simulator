@@ -159,6 +159,7 @@ td.sig-0 { color: #127a15; }
 .rail-pin.sel .rail-box { stroke: #f5c542; stroke-width: 2.5; }
 .rail-pin.out.empty .rail-box { stroke-dasharray: 4 3; }
 .src-dot { fill: #37d13a; stroke: #0b1e33; stroke-width: 1; }
+.src-hit { fill: transparent; pointer-events: all; }
 .bgate { cursor: move; }
 .bgate.sel .gate-body { stroke: #f5c542; stroke-width: 2.5; }
 .pin-in { cursor: pointer; stroke: #0b1e33; stroke-width: 1; }

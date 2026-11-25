@@ -186,15 +186,22 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await sleep(100);
   check('第一章：点了 9 次加门，画布 9 门，晶体管 191',
     qa('[data-gate]').length === 9 && q('#res-nand').textContent === '191');
+  // 画布直拨（第 64 轮）：点输入框本体拨 0/1，不用下方开关条；点小绿点才选为连线源
+  mousedown(q('[data-src="i:0"] .sw-track'));
+  await sleep(50);
+  check('第一章：点画布上 a 输入框拨到 1', /a = 1/.test(q('#sim-strip').textContent), q('#sim-strip').textContent);
+  mousedown(q('[data-src="i:0"] .rail-box'));
+  await sleep(50);
+  check('第一章：再点一次拨回 0', /a = 0/.test(q('#sim-strip').textContent), q('#sim-strip').textContent);
   // 按样本网表结构连线（信号映射与 test-factory.cjs 一致）
   const sample = T.parseTapnet(new Uint8Array(fs.readFileSync('/home/hatch/workspace/tapeout-hackathon/app/samples/full-adder-9nand.tapnet')));
   const gateIds = [1, 2, 3, 4, 5, 6, 7, 8, 9];
   function srcSel(s) {
     if (s === 0) return '[data-src="c:0"]';
     if (s === 1) return '[data-src="c:1"]';
-    if (s === 2) return '[data-src="i:0"]';
-    if (s === 3) return '[data-src="i:1"]';
-    if (s === 4) return '[data-src="i:2"]';
+    if (s === 2) return '[data-src="i:0"] .src-dot';
+    if (s === 3) return '[data-src="i:1"] .src-dot';
+    if (s === 4) return '[data-src="i:2"] .src-dot';
     return `[data-gate="${gateIds[s - 5]}"] .pin-out`;
   }
   let wired = 0, wireErr = '';
