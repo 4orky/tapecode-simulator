@@ -741,29 +741,29 @@
   // 玩家永远看得见下一个门槛。nextStep() 按进度只给一句话；milestones() 是 8 个
   // 可见的里程碑，全部是生态真实步骤（不是凑数的成就）。
   function nextStep(save) {
-    if (!save.visited.prologue) return { target: 'prologue', text: '先去设计台：拨动开关，认识 NAND 与 LATCH 两块积木。' };
-    if (Object.keys(save.passed).length === 0) return { target: 'ch1', text: '去任务板：搭出全加器，真值表全过就交货。' };
-    if (save.taped.length === 0) return { target: 'tapeout', text: '去流片厂：把通过的电路烧成一张改不了的电路卡。' };
-    if (save.miners.length === 0) return { target: 'mining', text: '去矿场：把电路卡注册成矿机，选 Behemoth ×6 或 TapeOut ×1。' };
-    if (save.day === 0) return { target: 'mining', text: '去矿场点「结算一天」，看你的矿机产出第一笔游戏 BEM。' };
-    if (!save.visited.market) return { target: 'market', text: '去集市：把挖到的游戏 BEM 花出去——买零件、开网站、抽奖。' };
-    if (!save.cpu.lit) return { target: 'cpu', text: '去 CPU 神殿：给 4 位 CPU 上电，跑满 16 拍点亮它。' };
-    if (save.processors.length === 0) return { target: 'factory', text: '去处理器工厂：花 5 游戏 BEM 开自己的处理器，自己定晶体管价——但先看清长尾：389 台里 111 台 0 产出。' };
-    if (!save.visited.test1) return { target: 'test1', text: '去卡片馆：玩 5 张真实 Test1 电路卡的网表。' };
-    return { target: 'codex', text: '通关了！去图鉴看看生态全景（35 条），或者继续优化电路、冲击更少门数。' };
+    if (!save.visited.prologue) return { target: 'prologue', text: t('next.prologue') };
+    if (Object.keys(save.passed).length === 0) return { target: 'ch1', text: t('next.ch1') };
+    if (save.taped.length === 0) return { target: 'tapeout', text: t('next.tapeout') };
+    if (save.miners.length === 0) return { target: 'mining', text: t('next.mining') };
+    if (save.day === 0) return { target: 'mining', text: t('next.miningSettle') };
+    if (!save.visited.market) return { target: 'market', text: t('next.market') };
+    if (!save.cpu.lit) return { target: 'cpu', text: t('next.cpu') };
+    if (save.processors.length === 0) return { target: 'factory', text: t('next.factory') };
+    if (!save.visited.test1) return { target: 'test1', text: t('next.test1') };
+    return { target: 'codex', text: t('next.done') };
   }
   function milestones(save) {
     return [
-      { id: 'm-prologue', name: '认识两块积木', done: Object.keys(save.prologueDone).length >= 4 },
-      { id: 'm-first-pass', name: '第一道 PoD 题通过', done: Object.keys(save.passed).length > 0 },
-      { id: 'm-first-tape', name: '第一张流片卡', done: save.taped.length > 0 },
-      { id: 'm-first-miner', name: '第一台矿机', done: save.miners.length > 0 },
-      { id: 'm-first-bem', name: '第一笔游戏 BEM 到账', done: (save.minedTotal || 0) > 0 },
-      { id: 'm-first-site', name: '第一家 DeWEB 网站', done: save.sites.length > 0 },
-      { id: 'm-first-lottery', name: '第一次参加抽奖', done: !!save.lottery.entered },
-      { id: 'm-cpu-lit', name: '点亮 CPU', done: !!save.cpu.lit },
-      { id: 'm-first-factory', name: '开一家处理器', done: save.processors.length > 0 },
-      { id: 'm-first-token', name: '发一个自己的币', done: save.tokens.length > 0 }
+      { id: 'm-prologue', name: t('ms.prologue'), done: Object.keys(save.prologueDone).length >= 4 },
+      { id: 'm-first-pass', name: t('ms.firstPass'), done: Object.keys(save.passed).length > 0 },
+      { id: 'm-first-tape', name: t('ms.firstTape'), done: save.taped.length > 0 },
+      { id: 'm-first-miner', name: t('ms.firstMiner'), done: save.miners.length > 0 },
+      { id: 'm-first-bem', name: t('ms.firstBem'), done: (save.minedTotal || 0) > 0 },
+      { id: 'm-first-site', name: t('ms.firstSite'), done: save.sites.length > 0 },
+      { id: 'm-first-lottery', name: t('ms.firstLottery'), done: !!save.lottery.entered },
+      { id: 'm-cpu-lit', name: t('ms.cpuLit'), done: !!save.cpu.lit },
+      { id: 'm-first-factory', name: t('ms.firstFactory'), done: save.processors.length > 0 },
+      { id: 'm-first-token', name: t('ms.firstToken'), done: save.tokens.length > 0 }
     ];
   }
 
@@ -1131,6 +1131,12 @@
     CODEX: CODEX, STATUS_LABEL: STATUS_LABEL, codexUnlocked: codexUnlocked, codexUnlockLabel: codexUnlockLabel,
     TEST1_CARDS: TEST1_CARDS
   };
+  // 多语言（第 58 轮）：纯逻辑也要用 t()（nextStep / milestones 的文案走词典），
+  // 所以 I18N_API 必须在下面 Node 提前 return 之前就接好。浏览器走 window.TapeI18n，
+  // Node 回归走 require；拿不到时 t() 返回 key 本身，界面不断。
+  var I18N_API = null;
+  try { I18N_API = (typeof module !== 'undefined' && module.exports) ? require('./i18n.js') : (typeof window !== 'undefined' ? window.TapeI18n : null); } catch (e) { I18N_API = null; }
+  function t(key, vars) { return I18N_API ? I18N_API.t(key, vars) : key; }
   if (typeof module !== 'undefined' && module.exports) module.exports = pure;
   global.TapeFactory = pure;
 
@@ -1184,12 +1190,14 @@
     if (goal) {
       var ns = nextStep(SAVE), bn = null;
       BUILDINGS.forEach(function (x) { if (x.id === ns.target) bn = x; });
-      goal.textContent = '👉 下一步：' + (bn ? bn.name : ns.target);
+      goal.textContent = t('hud.nextPrefix') + (bn ? t(bn.name) : ns.target);
     }
   }
 
   var VIEWS = ['town', 'prologue', 'ch1', 'tapeout', 'mining', 'market', 'cpu', 'factory', 'test1', 'codex', 'sim'];
+  var CUR_VIEW = 'town'; // 当前视图（第 58 轮：语言切换后重画当前视图用）
   function switchView(name) {
+    CUR_VIEW = name;
     if (typeof cpuStopAuto === 'function') cpuStopAuto(); // 离开 CPU 神殿就停掉自动跑
     VIEWS.forEach(function (v) { show($('view-' + v), v === name); });
     Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (b) {
@@ -1220,6 +1228,22 @@
     root.style.display = 'none';
     root.innerHTML = '';
   }
+  // 首次访问欢迎弹窗（第 16 轮）：只出现一次。讲清三件事：这是什么、怎么玩、诚实说明。
+  // 文案走 i18n 词典（第 58 轮），语言切换时若弹窗还开着就按新语言重画。
+  function showWelcome() {
+    if (SAVE.visited.welcome) return;
+    showModal('<h2>' + t('welcome.title') + '</h2>' +
+      '<p>' + t('welcome.p1') + '</p>' +
+      '<p>' + t('welcome.p2') + '</p>' +
+      '<p class="hint">' + t('welcome.p3') + '</p>' +
+      '<div class="toolbar"><button class="btn-primary" id="btn-welcome-start">' + t('welcome.start') + '</button>' +
+      '<button id="btn-welcome-later">' + t('welcome.later') + '</button></div>',
+      function () {
+        function done(go) { SAVE.visited.welcome = true; save(); closeModal(); if (go) switchView('prologue'); }
+        $('btn-welcome-start').onclick = function () { done(true); };
+        $('btn-welcome-later').onclick = function () { done(false); };
+      });
+  }
 
   /* ================= 小镇地图 ================= */
   // 建筑图标（第 15 轮）：手绘风描边 SVG，每栋建筑一个专属图形（Shapez 的教训：
@@ -1238,16 +1262,17 @@
     cards: bIcon('<rect x="8" y="3.5" width="12" height="16" rx="2"/><rect x="3.5" y="7.5" width="12" height="12" rx="2"/>'),
     book: bIcon('<path d="M12 6.5C10 5 7 4.5 4 4.5v14c3 0 6 .5 8 2 2-1.5 5-2 8-2v-14c-3 0-6 .5-8 2z"/><path d="M12 6.5v14"/>')
   };
+  // name/desc/hint/lock 存的是 i18n 键（第 58 轮），渲染时 t() 解析，别直接显示。
   var BUILDINGS = [
-    { id: 'prologue', name: '设计台', desc: '序章 · 两块积木', icon: ICONS.design, cat: 'design', group: 'main', open: function () { return true; }, hint: '认识 NAND 与 LATCH：拨开关，看信号流' },
-    { id: 'ch1', name: '任务板', desc: '第一章 · 接单', icon: ICONS.tasks, cat: 'design', group: 'main', open: function () { return !!SAVE.visited.prologue; }, lock: '先去设计台逛逛' },
-    { id: 'tapeout', name: '流片厂', desc: '第二章 · 流片', icon: ICONS.chip, cat: 'design', group: 'main', open: function () { return Object.keys(SAVE.passed).length > 0; }, lock: '先通过一道题（任务板）' },
-    { id: 'mining', name: '矿场', desc: '第三章 · 挖 BEM', icon: ICONS.mountain, cat: 'mine', group: 'main', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
-    { id: 'market', name: '集市', desc: '第四章 · 花 BEM', icon: ICONS.store, cat: 'trade', group: 'eco', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
-    { id: 'cpu', name: 'CPU 神殿', desc: '终章 · 点亮 CPU', icon: ICONS.cpu, cat: 'cpu', group: 'main', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
-    { id: 'factory', name: '处理器工厂', desc: '第五章 · 开厂', icon: ICONS.factory, cat: 'trade', group: 'eco', open: function () { return SAVE.cpu.lit; }, lock: '先点亮 CPU（神殿）' },
-    { id: 'test1', name: '卡片馆', desc: 'Test1 图鉴 · 真实网表', icon: ICONS.cards, cat: 'cards', group: 'ref', open: function () { return true; }, hint: '5 张真实 Test1 电路卡，可进模拟器玩' },
-    { id: 'codex', name: '图鉴', desc: '生态全景', icon: ICONS.book, cat: 'cards', group: 'ref', open: function () { return true; }, hint: '每遇到一个新组件，图鉴亮一条' }
+    { id: 'prologue', name: 'b.prologue.name', desc: 'b.prologue.desc', icon: ICONS.design, cat: 'design', group: 'main', open: function () { return true; }, hint: 'b.prologue.hint' },
+    { id: 'ch1', name: 'b.ch1.name', desc: 'b.ch1.desc', icon: ICONS.tasks, cat: 'design', group: 'main', open: function () { return !!SAVE.visited.prologue; }, lock: 'b.ch1.lock' },
+    { id: 'tapeout', name: 'b.tapeout.name', desc: 'b.tapeout.desc', icon: ICONS.chip, cat: 'design', group: 'main', open: function () { return Object.keys(SAVE.passed).length > 0; }, lock: 'b.tapeout.lock' },
+    { id: 'mining', name: 'b.mining.name', desc: 'b.mining.desc', icon: ICONS.mountain, cat: 'mine', group: 'main', open: function () { return SAVE.taped.length > 0; }, lock: 'b.mining.lock' },
+    { id: 'market', name: 'b.market.name', desc: 'b.market.desc', icon: ICONS.store, cat: 'trade', group: 'eco', open: function () { return SAVE.taped.length > 0; }, lock: 'b.market.lock' },
+    { id: 'cpu', name: 'b.cpu.name', desc: 'b.cpu.desc', icon: ICONS.cpu, cat: 'cpu', group: 'main', open: function () { return SAVE.taped.length > 0; }, lock: 'b.cpu.lock' },
+    { id: 'factory', name: 'b.factory.name', desc: 'b.factory.desc', icon: ICONS.factory, cat: 'trade', group: 'eco', open: function () { return SAVE.cpu.lit; }, lock: 'b.factory.lock' },
+    { id: 'test1', name: 'b.test1.name', desc: 'b.test1.desc', icon: ICONS.cards, cat: 'cards', group: 'ref', open: function () { return true; }, hint: 'b.test1.hint' },
+    { id: 'codex', name: 'b.codex.name', desc: 'b.codex.desc', icon: ICONS.book, cat: 'cards', group: 'ref', open: function () { return true; }, hint: 'b.codex.hint' }
   ];
   function renderTown() {
     var ns = nextStep(SAVE);
@@ -1267,9 +1292,9 @@
           (b.id === ns.target ? ' now' : '') + (ok && b.id !== ns.target ? ' dim' : '');
         return '<button class="' + cls + '" data-b="' + b.id + '" data-cat="' + (b.cat || '') + '"' + (ok ? '' : ' disabled') + '>' +
           '<span class="b-icon">' + b.icon + '</span>' +
-          '<span class="b-name">' + b.name + (visited ? ' ✓' : '') + '</span>' +
-          '<span class="b-desc">' + b.desc + '</span>' +
-          '<span class="b-hint">' + (ok ? (b.hint || '') : ('🔒 ' + b.lock)) + '</span>' +
+          '<span class="b-name">' + t(b.name) + (visited ? ' ✓' : '') + '</span>' +
+          '<span class="b-desc">' + t(b.desc) + '</span>' +
+          '<span class="b-hint">' + (ok ? (b.hint ? t(b.hint) : '') : ('🔒 ' + t(b.lock))) + '</span>' +
           '</button>';
       }).join('') + '</div>';
     }).join('');
@@ -1279,35 +1304,35 @@
     // 旅程进度（第 43 轮：每步一个分类色点，与建筑配色同一套颜色语言）
     var stage = SAVE.cpu.lit ? 7 : (SAVE.visited.cpu ? 6 : (SAVE.visited.market ? 5 : (SAVE.taped.length > 0 ? 4 : (Object.keys(SAVE.passed).length > 0 ? 3 : (SAVE.visited.prologue ? 2 : 1)))));
     var steps = [
-      { name: '买零件', cat: 'trade' }, { name: '画电路', cat: 'design' },
-      { name: '流片', cat: 'design' }, { name: '挖矿', cat: 'mine' },
-      { name: '花 BEM', cat: 'trade' }, { name: '点亮 CPU', cat: 'cpu' },
-      { name: '开厂 / 建应用', cat: 'trade' }
+      { name: t('journey.buy'), cat: 'trade' }, { name: t('journey.draw'), cat: 'design' },
+      { name: t('journey.tapeout'), cat: 'design' }, { name: t('journey.mine'), cat: 'mine' },
+      { name: t('journey.spend'), cat: 'trade' }, { name: t('journey.cpu'), cat: 'cpu' },
+      { name: t('journey.factory'), cat: 'trade' }
     ];
     $('journey').innerHTML = steps.map(function (s, i) {
       var cls = i + 1 < stage ? 'done' : (i + 1 === stage ? 'now' : 'later');
       return '<span class="j-step ' + cls + '"><span class="j-dot" data-cat="' + s.cat + '"></span>' + s.name + '</span>' + (i < steps.length - 1 ? '<span class="j-arrow">→</span>' : '');
-    }).join('') + '<span class="j-note">（' + (SAVE.processors.length > 0 ? '你已开厂：小镇里多了一栋处理器工厂' : '开厂在小镇的处理器工厂，点亮 CPU 后解锁') + '）</span>';
+    }).join('') + '<span class="j-note">' + t(SAVE.processors.length > 0 ? 'journey.noteOpen' : 'journey.noteClosed') + '</span>';
     // 下一步引导（一次只给一句话，永远有门槛在眼前）
-    $('next-step').innerHTML = '<div class="next-step">👉 下一步：' + esc(ns.text) +
-      ' <button class="btn-primary" id="btn-next-step">去 →</button></div>';
+    $('next-step').innerHTML = '<div class="next-step">' + t('town.nextPrefix') + esc(ns.text) +
+      ' <button class="btn-primary" id="btn-next-step">' + t('town.goBtn') + '</button></div>';
     $('btn-next-step').onclick = function () { switchView(ns.target); };
     // 里程碑（8 个生态真实步骤，做完就亮）
     var ms = milestones(SAVE);
     var doneCount = ms.filter(function (m) { return m.done; }).length;
-    $('milestones').innerHTML = '<p class="hint">已完成 ' + doneCount + ' / ' + ms.length + '</p><div class="ms-list">' +
+    $('milestones').innerHTML = '<p class="hint">' + t('town.msDone', { done: doneCount, total: ms.length }) + '</p><div class="ms-list">' +
       ms.map(function (m) {
         return '<span class="ms-chip' + (m.done ? ' done' : '') + '">' + (m.done ? '✓ ' : '○ ') + esc(m.name) + '</span>';
       }).join('') + '</div>';
     var msSum = $('fold-milestones');
-    if (msSum) msSum.querySelector('summary').textContent = '里程碑 ' + doneCount + ' / ' + ms.length;
+    if (msSum) msSum.querySelector('summary').textContent = t('town.foldMilestonesCount', { done: doneCount, total: ms.length });
     // 存档导出/导入（第 12 轮）：存档只在浏览器本地。换设备（手机 ↔ 电脑）时，
     // 导出一份 JSON，另一台设备上粘贴导入即可恢复。导入会覆盖当前存档。
     $('save-box').innerHTML = '<div class="panel">' +
-      '<p class="hint">存档只存在这台设备的浏览器里。换设备时：先点“导出存档”拿到 JSON，再到另一台设备粘贴“导入存档”。</p>' +
-      '<div class="toolbar"><button id="btn-save-export">⬇ 导出存档</button>' +
-      '<button id="btn-save-import">⬆ 导入存档</button></div>' +
-      '<textarea id="ta-save-import" rows="3" style="width:100%;display:none" placeholder="把导出的 JSON 粘贴到这里，再点一次“导入存档”"></textarea>' +
+      '<p class="hint">' + t('save.hint') + '</p>' +
+      '<div class="toolbar"><button id="btn-save-export">' + t('save.export') + '</button>' +
+      '<button id="btn-save-import">' + t('save.import') + '</button></div>' +
+      '<textarea id="ta-save-import" rows="3" style="width:100%;display:none" placeholder="' + esc(t('save.importPlaceholder')) + '"></textarea>' +
       '<p class="hint" id="save-msg"></p></div>';
     $('btn-save-export').onclick = function () {
       try {
@@ -1317,19 +1342,19 @@
         a.download = 'tapecode-save.json';
         document.body.appendChild(a); a.click(); a.remove();
         setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
-        $('save-msg').textContent = '存档已导出：tapecode-save.json。';
+        $('save-msg').textContent = t('save.exported');
       } catch (e) {
-        $('save-msg').textContent = '导出失败（这台浏览器不支持文件下载）：' + e.message;
+        $('save-msg').textContent = t('save.exportFail') + e.message;
       }
     };
     $('btn-save-import').onclick = function () {
       var ta = $('ta-save-import');
-      if (ta.style.display === 'none') { ta.style.display = 'block'; ta.focus(); $('save-msg').textContent = '把导出的 JSON 粘贴到上面，再点一次“导入存档”。'; return; }
+      if (ta.style.display === 'none') { ta.style.display = 'block'; ta.focus(); $('save-msg').textContent = t('save.importPrompt'); return; }
       var r = importSaveText(ta.value);
-      if (!r.ok) { $('save-msg').textContent = '导入失败：' + r.reason; return; }
+      if (!r.ok) { $('save-msg').textContent = t('save.importFail') + r.reason; return; }
       ta.value = ''; ta.style.display = 'none';
       renderTown(); // 先重渲染（它会重建存档面板），再写成功文案，否则文案被冲掉
-      $('save-msg').textContent = '导入成功：存档已恢复。';
+      $('save-msg').textContent = t('save.imported');
       setStatus('存档已导入恢复。');
     };
     refreshHud();
@@ -2642,7 +2667,7 @@
   /* ================= 图鉴 ================= */
   function renderCodex() {
     var unlocked = CODEX.filter(function (e) { return codexUnlocked(SAVE, e); });
-    $('codex-progress').textContent = '已解锁 ' + unlocked.length + ' / ' + CODEX.length + ' 条。解锁条件：去小镇里对应的地方逛逛。';
+    $('codex-progress').textContent = t('codex.progress', { n: unlocked.length, total: CODEX.length });
     $('codex-grid').innerHTML = CODEX.map(function (e) {
       var ok = codexUnlocked(SAVE, e);
       return '<article class="codex-card' + (ok ? '' : ' locked') + '">' +
@@ -2709,27 +2734,20 @@
     $('modal-root').addEventListener('click', function (ev) {
       if (ev.target && ev.target.classList && ev.target.classList.contains('modal-backdrop')) closeModal();
     });
-    // 底部诚实声明
+    // 底部诚实声明（第 58 轮：文案走 i18n 词典）
     var honest = $('honesty');
-    if (honest) honest.innerHTML = '诚实说明：本游戏是教学演示，不连钱包、不花真钱、不承诺任何收益。' +
-      '游戏里的 BEM 是<b>游戏币，不是真实 BEM</b>。真实数字标有快照时间（2026-11-24），Test1 网表是随机分配的，不是 PoD 题答案。' +
-      '网表本身不在链上；信任根是链上 baseURI 指纹 + SHA-256 校验链。TapeSend 集成未核实，本游戏不声称已集成。';
+    if (honest) honest.innerHTML = t('footer.honesty');
     switchView('town');
     setStatus('欢迎来到链上造芯厂：先去设计台认识两块积木。');
-    // 首次访问欢迎弹窗（第 16 轮）：只出现一次。讲清三件事：这是什么、怎么玩、诚实说明。
-    if (!SAVE.visited.welcome) {
-      showModal('<h2>欢迎来到《链上造芯厂》</h2>' +
-        '<p>TapeOut 是把芯片制造搬上区块链：设计电路、流片上链、按设计质量挖 BEM。这款游戏让你 20 分钟玩明白它。</p>' +
-        '<p>路线：设计台认识 NAND 与 LATCH → 任务板接单画电路 → 流片成卡 → 注册矿机每天结算 → 集市花 BEM → 开厂、发币 → 点亮一台属于自己的 4 位 CPU。</p>' +
-        '<p class="hint">不连钱包、不花真钱、不承诺收益。游戏里的 BEM 是游戏币，不是真实 BEM。</p>' +
-        '<div class="toolbar"><button class="btn-primary" id="btn-welcome-start">开始造芯 →</button>' +
-        '<button id="btn-welcome-later">先自己逛逛</button></div>',
-        function () {
-          function done(go) { SAVE.visited.welcome = true; save(); closeModal(); if (go) switchView('prologue'); }
-          $('btn-welcome-start').onclick = function () { done(true); };
-          $('btn-welcome-later').onclick = function () { done(false); };
-        });
-    }
+    // 语言切换后重渲染（第 58 轮）：静态 chrome 由 i18n.js 的 applyI18n 翻，
+    // 动态内容（当前视图 + HUD + 诚实声明 + 开着的欢迎弹窗）在这里重画。
+    if (I18N_API) I18N_API.onChange(function () {
+      var h = $('honesty'); if (h) h.innerHTML = t('footer.honesty');
+      refreshHud();
+      switchView(CUR_VIEW);
+      if ($('modal-root').style.display !== 'none' && !SAVE.visited.welcome) showWelcome();
+    });
+    showWelcome();
   }
   init();
 })(typeof window !== 'undefined' ? window : globalThis);

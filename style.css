@@ -28,6 +28,8 @@ h3 { color: #e2e8f0; font-size: 16px; margin: 14px 0 8px; }
 .hud-goal:hover { background: #1e3a5f; }
 /* 第 55 轮：HUD 次要资产收进抽屉，默认合上 */
 .hud-more { margin-left: auto; }
+.lang-wrap { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; }
+.lang-wrap select { background: #0d1b2e; color: #e8f2ff; border: 1px solid #1e3a5f; border-radius: 6px; padding: 4px 6px; font-size: 13px; }
 .hud-more summary { cursor: pointer; color: #8fa8c4; font-size: 13px; list-style: none; padding: 4px 8px; border-radius: 6px; }
 .hud-more summary:hover { background: #16283f; color: #dbe7f3; }
 .hud-more summary::-webkit-details-marker { display: none; }

@@ -730,6 +730,25 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
   check('总账：通 2 道、最佳总门数 16', bt.done === 2 && bt.gates === 16);
 }
 
+// ---------- 29. 多语言（第 58 轮） ----------
+{
+  const I18N = require('./i18n.js');
+  check('i18n：默认中文', I18N.currentLang() === 'zh');
+  check('i18n：中文下一步文案与原来一致', I18N.t('next.prologue') === '先去设计台：拨动开关，认识 NAND 与 LATCH 两块积木。');
+  check('i18n：缺 key 返回 key 本身', I18N.t('no.such.key') === 'no.such.key');
+  check('i18n：未上线的语言拒绝切换', I18N.setLang('ja') === false && I18N.currentLang() === 'zh');
+  I18N.setLang('en');
+  check('i18n：切英文后 t() 出英文', /Workbench/.test(I18N.t('next.prologue')));
+  check('i18n：英文占位符替换', I18N.t('codex.progress', { n: 3, total: 35 }) === 'Unlocked 3 / 35 entries. How to unlock: visit the matching place in town.');
+  check('i18n：nextStep() 文案跟着语言走', F.nextStep(F.defaultSave()).text.indexOf('Workbench') !== -1);
+  delete I18N.I18N.en['next.ch1'];
+  check('i18n：英文缺 key 回退中文', I18N.t('next.ch1') === '去任务板：搭出全加器，真值表全过就交货。');
+  I18N.I18N.en['next.ch1'] = 'Go to the Task Board: build a full adder and pass the whole truth table to deliver.';
+  I18N.setLang('zh');
+  check('i18n：切回中文', I18N.currentLang() === 'zh');
+  check('i18n：切回后 nextStep() 是中文', F.nextStep(F.defaultSave()).text === '先去设计台：拨动开关，认识 NAND 与 LATCH 两块积木。');
+}
+
 console.log('\n' + lines.join('\n'));
 console.log(`\n合计：${pass} 通过 / ${fail} 失败`);
 process.exit(fail ? 1 : 0);

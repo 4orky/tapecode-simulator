@@ -116,6 +116,23 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   check('小镇：HUD 初始 200 NAND / 0 游戏 BEM',
     q('#res-nand').textContent === '200' && q('#res-bem').textContent === '0.00');
 
+  // ---------- 多语言（第 58 轮） ----------
+  check('语言：切换器在位，默认中文', !!q('#lang-select') && q('#lang-select').value === 'zh');
+  q('#lang-select').value = 'en';
+  q('#lang-select').dispatchEvent(new window.Event('change', { bubbles: true }));
+  await sleep(200);
+  check('语言：切英文后导航变英文', q('button[data-nav="town"]').textContent === '🏘 Town Map');
+  check('语言：切英文后小镇标题变英文', q('#view-town h2').textContent === 'Eco Town');
+  check('语言：切英文后下一步变英文', /Next: /.test(q('#next-step').textContent) && /Task Board/.test(q('#next-step').textContent));
+  check('语言：切英文后 HUD 目标变英文', /Next: /.test(q('#hud-goal').textContent));
+  check('语言：切英文后建筑名变英文', q('.building.now .b-name').textContent === 'Task Board ✓' || q('.building.now .b-name').textContent === 'Task Board');
+  check('语言：选择存 localStorage', window.localStorage.getItem('tapecode-lang') === 'en');
+  check('语言：html lang 属性跟上', q('html').getAttribute('lang') === 'en');
+  q('#lang-select').value = 'zh';
+  q('#lang-select').dispatchEvent(new window.Event('change', { bubbles: true }));
+  await sleep(200);
+  check('语言：切回中文', q('button[data-nav="town"]').textContent === '🏘 小镇地图' && window.localStorage.getItem('tapecode-lang') === 'zh');
+
   // ---------- 序章 ----------
   nav('prologue');
   await sleep(200);
