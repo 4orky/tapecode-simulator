@@ -11,14 +11,17 @@
 <noscript><p style="padding:20px;text-align:center">《链上造芯厂》需要 JavaScript 才能玩（画电路、跑仿真都在浏览器里算）。请启用 JavaScript 后刷新页面。</p></noscript>
 <header>
   <h1>链上造芯厂 <span class="en">TapeOut — From One NAND to a CPU</span></h1>
-  <p class="sub">把芯片制造搬上区块链：用代币做晶体管，在浏览器里设计数字电路，流片成链上电路 NFT，再按设计质量挖 BEM。玩着玩着，你就明白 TapeOut 在干什么。</p>
   <div id="hud" class="hud">
-    <span>晶体管 NAND <b id="res-nand">200</b></span>
-    <span>LATCH <b id="res-latch">20</b></span>
-    <span>游戏 BEM <b id="res-bem">0.00</b> <i class="game-tag">游戏币，不是真实 BEM</i></span>
-    <span>第 <b id="res-day">0</b> 天</span>
-    <span>⭐ <b id="res-stars">0</b>/<b id="res-stars-max">18</b></span>
+    <span class="hud-primary">游戏 BEM <b id="res-bem">0.00</b> <i class="game-tag">游戏币，不是真实 BEM</i></span>
+    <button id="hud-goal" class="hud-goal" title="当前目标，点一下就去">下一步</button>
     <button id="btn-sound" title="音效开关">🔊</button>
+    <details class="hud-more" id="hud-more">
+      <summary>☰ 资产</summary>
+      <span>晶体管 NAND <b id="res-nand">200</b></span>
+      <span>LATCH <b id="res-latch">20</b></span>
+      <span>第 <b id="res-day">0</b> 天</span>
+      <span>⭐ <b id="res-stars">0</b>/<b id="res-stars-max">18</b></span>
+    </details>
   </div>
   <nav id="main-nav">
     <button data-nav="town" class="active">🏘 小镇地图</button>

@@ -1161,6 +1161,13 @@
     $('res-stars').textContent = totalStars(SAVE);
     var max = $('res-stars-max');
     if (max) max.textContent = PROBLEMS.length * 3; // 满星 = 题数 × 3（曾写死 /9，题库扩到 6 道后过期）
+    // HUD 当前目标（第 55 轮视觉简化）：只显示下一步去哪，点一下就去
+    var goal = $('hud-goal');
+    if (goal) {
+      var ns = nextStep(SAVE), bn = null;
+      BUILDINGS.forEach(function (x) { if (x.id === ns.target) bn = x; });
+      goal.textContent = '👉 下一步：' + (bn ? bn.name : ns.target);
+    }
   }
 
   var VIEWS = ['town', 'prologue', 'ch1', 'tapeout', 'mining', 'market', 'cpu', 'factory', 'test1', 'codex', 'sim'];
@@ -2637,6 +2644,9 @@
         if (SAVE.sound !== false) playChime('coin');
       };
     }
+    // HUD 当前目标按钮（第 55 轮）：点一下直达下一步
+    var hg = $('hud-goal');
+    if (hg) hg.onclick = function () { switchView(nextStep(SAVE).target); };
     // 模拟器控制
     var lb = $('sim-load-live');
     if (lb) lb.onclick = function () { loadSim($('sim-token').value, 'live'); };

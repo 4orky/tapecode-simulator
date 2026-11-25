@@ -20,12 +20,24 @@ h2 { color: #f1f5f9; font-size: 20px; margin: 0 0 10px; }
 h3 { color: #e2e8f0; font-size: 16px; margin: 14px 0 8px; }
 
 /* ---- HUD 与导航 ---- */
-.hud { display: flex; flex-wrap: wrap; gap: 8px 18px; background: #10233a; border: 1px solid #1e3a5f; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 14px; }
+.hud { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; background: #10233a; border: 1px solid #1e3a5f; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 14px; }
 .hud b { color: #f5c542; }
+.hud-primary { font-size: 15px; }
+/* 第 55 轮：HUD 当前目标按钮——全站唯一带金色描边的常驻按钮，一眼找到下一步 */
+.hud-goal { color: #f1f5f9; font-weight: bold; border: 1px solid #f5c542; border-radius: 20px; padding: 4px 12px; }
+.hud-goal:hover { background: #1e3a5f; }
+/* 第 55 轮：HUD 次要资产收进抽屉，默认合上 */
+.hud-more { margin-left: auto; }
+.hud-more summary { cursor: pointer; color: #8fa8c4; font-size: 13px; list-style: none; padding: 4px 8px; border-radius: 6px; }
+.hud-more summary:hover { background: #16283f; color: #dbe7f3; }
+.hud-more summary::-webkit-details-marker { display: none; }
+.hud-more span { margin-left: 12px; white-space: nowrap; }
 .game-tag { font-style: normal; font-size: 11px; color: #f5c542; border: 1px solid #f5c542; border-radius: 4px; padding: 0 4px; margin-left: 2px; }
 #main-nav { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
-button { padding: 6px 12px; font-size: 14px; border: 1px solid #2b5a8a; background: #16283f; color: #dbe7f3; border-radius: 6px; cursor: pointer; }
-button:hover { background: #1e3a5f; }
+/* 第 55 轮视觉简化：默认按钮去边框、弱化——全站只有一个主强调色（金），
+   主操作才用绿色 .btn-primary，当前页才用蓝色 .active；其余按钮不抢视线。 */
+button { padding: 6px 12px; font-size: 14px; border: 1px solid transparent; background: transparent; color: #a8bdd4; border-radius: 6px; cursor: pointer; }
+button:hover { background: #16283f; color: #dbe7f3; }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 button.active { background: #1d4ed8; border-color: #3b82f6; color: #fff; }
 .btn-primary { background: #15803d; border-color: #22c55e; color: #fff; font-weight: bold; }
@@ -203,12 +215,9 @@ td.sig-0 { color: #127a15; }
 .stall-row input[type=text] { padding: 7px 10px; font-size: 14px; background: #0b1e33; color: #dbe7f3; border: 1px solid #2b5a8a; border-radius: 6px; min-width: 200px; }
 
 /* ---- 视觉打磨（第 1 轮：学 Factorio / Shapez / Mini Motorways） ---- */
-/* Factorio：流动即反馈——亮灯的建筑要有“在运转”的呼吸感，而不是静态边框 */
-@keyframes litPulse {
-  0%, 100% { box-shadow: 0 0 0 1px #f5c542 inset, 0 0 6px rgba(245,197,66,0.25); }
-  50% { box-shadow: 0 0 0 1px #f5c542 inset, 0 0 16px rgba(245,197,66,0.55); }
-}
-.building.lit { animation: litPulse 2.4s ease-in-out infinite; }
+/* 第 55 轮视觉简化：亮灯建筑的呼吸动画去掉（参考 FabX / Agent Escrow：首屏无
+   competing 动效）。全站只留当前步骤一个呼吸点（.j-step.now）。
+   去过的地方只留静态金色描边 + 名字后的 ✓。 */
 /* Mini Motorways：微反馈——按下去有 pop，当前步骤有呼吸 */
 button:active { transform: scale(0.96); }
 @keyframes nowPulse {
@@ -263,11 +272,11 @@ svg.bschem [data-gate] { touch-action: none; }
 /* ---- 小镇天际线与建筑分类配色（第 6 轮） ---- */
 .town-skyline { margin: 6px 0 4px; border-radius: 10px; overflow: hidden; border: 1px solid #1e3a5f; }
 .town-skyline svg { display: block; width: 100%; height: 72px; background: linear-gradient(180deg, #0a1622, #0f2033); }
-.building[data-cat="design"] { border-top: 3px solid #37d13a; }
-.building[data-cat="mine"] { border-top: 3px solid #f5c542; }
-.building[data-cat="trade"] { border-top: 3px solid #a78bfa; }
-.building[data-cat="cpu"] { border-top: 3px solid #38bdf8; }
-.building[data-cat="cards"] { border-top: 3px solid #f472b6; }
+/* 第 55 轮视觉简化：分类彩色顶边只留给当前章节（.now，金色，第 56 轮 JS 加类）；
+   其余建筑统一描边，分类色只保留在旅程小圆点上（小面积，不抢视线）。
+   参考：FabX“只有一个强调色”。 */
+.building.now { border-top: 3px solid #f5c542; box-shadow: 0 0 12px rgba(245,197,66,0.25); }
+.building.dim { opacity: 0.75; }
 
 /* ---- 移动端适配 ---- */
 @media (max-width: 720px) {
