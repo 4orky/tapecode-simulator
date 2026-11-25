@@ -63,7 +63,12 @@ button.active { background: #1d4ed8; border-color: #3b82f6; color: #fff; }
 .j-dot[data-cat="cards"] { background: #f472b6; }
 .j-arrow { color: #64748b; }
 .j-note { color: #8fa8c4; font-size: 12px; margin-left: 6px; }
-.town-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.town-group { font-size: 13px; color: #8fa8c4; font-weight: normal; margin: 14px 0 8px; letter-spacing: 1px; }
+.town-subgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.town-fold { margin: 10px 0; }
+.town-fold summary { cursor: pointer; color: #8fa8c4; font-size: 14px; padding: 6px 0; }
+.town-fold summary:hover { color: #e8f2ff; }
+.town-fold .journey { margin-top: 6px; }
 .building { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 4px; padding: 16px; background: #10233a; border: 1px solid #1e3a5f; border-radius: 12px; cursor: pointer; }
 .building:hover { border-color: #3b82f6; }
 .building.lit { border-color: #f5c542; box-shadow: 0 0 0 1px #f5c542 inset; }
@@ -285,7 +290,7 @@ svg.bschem [data-gate] { touch-action: none; }
   #main-nav { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
   #main-nav button { flex: 0 0 auto; }
   .hud { font-size: 13px; gap: 6px 12px; }
-  .town-grid { grid-template-columns: 1fr 1fr; }
+  .town-subgrid { grid-template-columns: 1fr 1fr; }
   .builder-canvas, .exp-board, .diagram { max-height: 55vh; }
   .modal { width: calc(100% - 24px); padding: 16px; }
 }

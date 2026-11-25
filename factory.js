@@ -1221,27 +1221,39 @@
     book: bIcon('<path d="M12 6.5C10 5 7 4.5 4 4.5v14c3 0 6 .5 8 2 2-1.5 5-2 8-2v-14c-3 0-6 .5-8 2z"/><path d="M12 6.5v14"/>')
   };
   var BUILDINGS = [
-    { id: 'prologue', name: '设计台', desc: '序章 · 两块积木', icon: ICONS.design, cat: 'design', open: function () { return true; }, hint: '认识 NAND 与 LATCH：拨开关，看信号流' },
-    { id: 'ch1', name: '任务板', desc: '第一章 · 接单', icon: ICONS.tasks, cat: 'design', open: function () { return !!SAVE.visited.prologue; }, lock: '先去设计台逛逛' },
-    { id: 'tapeout', name: '流片厂', desc: '第二章 · 流片', icon: ICONS.chip, cat: 'design', open: function () { return Object.keys(SAVE.passed).length > 0; }, lock: '先通过一道题（任务板）' },
-    { id: 'mining', name: '矿场', desc: '第三章 · 挖 BEM', icon: ICONS.mountain, cat: 'mine', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
-    { id: 'market', name: '集市', desc: '第四章 · 花 BEM', icon: ICONS.store, cat: 'trade', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
-    { id: 'cpu', name: 'CPU 神殿', desc: '终章 · 点亮 CPU', icon: ICONS.cpu, cat: 'cpu', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
-    { id: 'factory', name: '处理器工厂', desc: '第五章 · 开厂', icon: ICONS.factory, cat: 'trade', open: function () { return SAVE.cpu.lit; }, lock: '先点亮 CPU（神殿）' },
-    { id: 'test1', name: '卡片馆', desc: 'Test1 图鉴 · 真实网表', icon: ICONS.cards, cat: 'cards', open: function () { return true; }, hint: '5 张真实 Test1 电路卡，可进模拟器玩' },
-    { id: 'codex', name: '图鉴', desc: '生态全景', icon: ICONS.book, cat: 'cards', open: function () { return true; }, hint: '每遇到一个新组件，图鉴亮一条' }
+    { id: 'prologue', name: '设计台', desc: '序章 · 两块积木', icon: ICONS.design, cat: 'design', group: 'main', open: function () { return true; }, hint: '认识 NAND 与 LATCH：拨开关，看信号流' },
+    { id: 'ch1', name: '任务板', desc: '第一章 · 接单', icon: ICONS.tasks, cat: 'design', group: 'main', open: function () { return !!SAVE.visited.prologue; }, lock: '先去设计台逛逛' },
+    { id: 'tapeout', name: '流片厂', desc: '第二章 · 流片', icon: ICONS.chip, cat: 'design', group: 'main', open: function () { return Object.keys(SAVE.passed).length > 0; }, lock: '先通过一道题（任务板）' },
+    { id: 'mining', name: '矿场', desc: '第三章 · 挖 BEM', icon: ICONS.mountain, cat: 'mine', group: 'main', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
+    { id: 'market', name: '集市', desc: '第四章 · 花 BEM', icon: ICONS.store, cat: 'trade', group: 'eco', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
+    { id: 'cpu', name: 'CPU 神殿', desc: '终章 · 点亮 CPU', icon: ICONS.cpu, cat: 'cpu', group: 'main', open: function () { return SAVE.taped.length > 0; }, lock: '先流片一张电路卡' },
+    { id: 'factory', name: '处理器工厂', desc: '第五章 · 开厂', icon: ICONS.factory, cat: 'trade', group: 'eco', open: function () { return SAVE.cpu.lit; }, lock: '先点亮 CPU（神殿）' },
+    { id: 'test1', name: '卡片馆', desc: 'Test1 图鉴 · 真实网表', icon: ICONS.cards, cat: 'cards', group: 'ref', open: function () { return true; }, hint: '5 张真实 Test1 电路卡，可进模拟器玩' },
+    { id: 'codex', name: '图鉴', desc: '生态全景', icon: ICONS.book, cat: 'cards', group: 'ref', open: function () { return true; }, hint: '每遇到一个新组件，图鉴亮一条' }
   ];
   function renderTown() {
+    var ns = nextStep(SAVE);
     var wrap = $('town-grid');
-    wrap.innerHTML = BUILDINGS.map(function (b) {
-      var ok = b.open();
-      var visited = !!SAVE.visited[b.id];
-      return '<button class="building' + (ok ? '' : ' locked') + (visited ? ' lit' : '') + '" data-b="' + b.id + '" data-cat="' + (b.cat || '') + '"' + (ok ? '' : ' disabled') + '>' +
-        '<span class="b-icon">' + b.icon + '</span>' +
-        '<span class="b-name">' + b.name + (visited ? ' ✓' : '') + '</span>' +
-        '<span class="b-desc">' + b.desc + '</span>' +
-        '<span class="b-hint">' + (ok ? (b.hint || '') : ('🔒 ' + b.lock)) + '</span>' +
-        '</button>';
+    var GROUPS = [
+      { id: 'main', name: '造芯主线' },
+      { id: 'eco', name: '生态 · 花 BEM 与开厂' },
+      { id: 'ref', name: '图鉴 · 查资料' }
+    ];
+    wrap.innerHTML = GROUPS.map(function (g) {
+      var bs = BUILDINGS.filter(function (b) { return b.group === g.id; });
+      if (!bs.length) return '';
+      return '<h3 class="town-group">' + g.name + '</h3><div class="town-subgrid">' + bs.map(function (b) {
+        var ok = b.open();
+        var visited = !!SAVE.visited[b.id];
+        var cls = 'building' + (ok ? '' : ' locked') + (visited ? ' lit' : '') +
+          (b.id === ns.target ? ' now' : '') + (ok && b.id !== ns.target ? ' dim' : '');
+        return '<button class="' + cls + '" data-b="' + b.id + '" data-cat="' + (b.cat || '') + '"' + (ok ? '' : ' disabled') + '>' +
+          '<span class="b-icon">' + b.icon + '</span>' +
+          '<span class="b-name">' + b.name + (visited ? ' ✓' : '') + '</span>' +
+          '<span class="b-desc">' + b.desc + '</span>' +
+          '<span class="b-hint">' + (ok ? (b.hint || '') : ('🔒 ' + b.lock)) + '</span>' +
+          '</button>';
+      }).join('') + '</div>';
     }).join('');
     Array.prototype.forEach.call(wrap.querySelectorAll('.building:not(.locked)'), function (btn) {
       btn.onclick = function () { switchView(btn.getAttribute('data-b')); };
@@ -1259,20 +1271,21 @@
       return '<span class="j-step ' + cls + '"><span class="j-dot" data-cat="' + s.cat + '"></span>' + s.name + '</span>' + (i < steps.length - 1 ? '<span class="j-arrow">→</span>' : '');
     }).join('') + '<span class="j-note">（' + (SAVE.processors.length > 0 ? '你已开厂：小镇里多了一栋处理器工厂' : '开厂在小镇的处理器工厂，点亮 CPU 后解锁') + '）</span>';
     // 下一步引导（一次只给一句话，永远有门槛在眼前）
-    var ns = nextStep(SAVE);
     $('next-step').innerHTML = '<div class="next-step">👉 下一步：' + esc(ns.text) +
       ' <button class="btn-primary" id="btn-next-step">去 →</button></div>';
     $('btn-next-step').onclick = function () { switchView(ns.target); };
     // 里程碑（8 个生态真实步骤，做完就亮）
     var ms = milestones(SAVE);
     var doneCount = ms.filter(function (m) { return m.done; }).length;
-    $('milestones').innerHTML = '<h3>里程碑 ' + doneCount + ' / ' + ms.length + '</h3><div class="ms-list">' +
+    $('milestones').innerHTML = '<p class="hint">已完成 ' + doneCount + ' / ' + ms.length + '</p><div class="ms-list">' +
       ms.map(function (m) {
         return '<span class="ms-chip' + (m.done ? ' done' : '') + '">' + (m.done ? '✓ ' : '○ ') + esc(m.name) + '</span>';
       }).join('') + '</div>';
+    var msSum = $('fold-milestones');
+    if (msSum) msSum.querySelector('summary').textContent = '里程碑 ' + doneCount + ' / ' + ms.length;
     // 存档导出/导入（第 12 轮）：存档只在浏览器本地。换设备（手机 ↔ 电脑）时，
     // 导出一份 JSON，另一台设备上粘贴导入即可恢复。导入会覆盖当前存档。
-    $('save-box').innerHTML = '<div class="panel"><h3>💾 存档</h3>' +
+    $('save-box').innerHTML = '<div class="panel">' +
       '<p class="hint">存档只存在这台设备的浏览器里。换设备时：先点“导出存档”拿到 JSON，再到另一台设备粘贴“导入存档”。</p>' +
       '<div class="toolbar"><button id="btn-save-export">⬇ 导出存档</button>' +
       '<button id="btn-save-import">⬆ 导入存档</button></div>' +
@@ -2647,6 +2660,13 @@
     // HUD 当前目标按钮（第 55 轮）：点一下直达下一步
     var hg = $('hud-goal');
     if (hg) hg.onclick = function () { switchView(nextStep(SAVE).target); };
+    // 小镇折叠区手风琴（第 56 轮）：一次只开一个，画面一次只讲一件事
+    Array.prototype.forEach.call(document.querySelectorAll('.town-fold'), function (d) {
+      d.addEventListener('toggle', function () {
+        if (!d.open) return;
+        Array.prototype.forEach.call(document.querySelectorAll('.town-fold'), function (o) { if (o !== d) o.open = false; });
+      });
+    });
     // 模拟器控制
     var lb = $('sim-load-live');
     if (lb) lb.onclick = function () { loadSim($('sim-token').value, 'live'); };

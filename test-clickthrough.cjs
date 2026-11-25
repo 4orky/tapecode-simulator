@@ -64,6 +64,19 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   // ---------- 小镇 ----------
   check('小镇：9 栋建筑', qa('.building').length === 9);
+  // 小镇分组 + 折叠区（第 56 轮）：3 个分组、折叠默认合上、当前章节高亮、其余弱化
+  check('小镇：3 个分组标题', qa('.town-group').length === 3);
+  check('小镇：分组名正确', qa('.town-group').map(el => el.textContent).join('|') === '造芯主线|生态 · 花 BEM 与开厂|图鉴 · 查资料');
+  check('小镇：折叠区默认合上', !q('#fold-journey').open && !q('#fold-milestones').open && !q('#fold-save').open);
+  check('小镇：当前章节建筑高亮（任务板）', q('.building.now') && q('.building.now').getAttribute('data-b') === 'ch1');
+  check('小镇：其余已解锁建筑弱化', qa('.building.dim').length === 3);
+  check('小镇：里程碑折叠标题带计数', /里程碑 \d+ \/ 10/.test(q('#fold-milestones summary').textContent));
+  q('#fold-journey').open = true;
+  q('#fold-journey').dispatchEvent(new window.Event('toggle'));
+  q('#fold-milestones').open = true;
+  q('#fold-milestones').dispatchEvent(new window.Event('toggle'));
+  await sleep(50);
+  check('小镇：手风琴一次只开一个', q('#fold-milestones').open && !q('#fold-journey').open);
   // 音效开关（第 53 轮）：默认开，点一下静音，再点恢复
   check('音效：开关在 HUD 里，默认开', !!q('#btn-sound') && q('#btn-sound').textContent === '🔊');
   click(q('#btn-sound'));
