@@ -749,6 +749,28 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
   check('i18n：切回后 nextStep() 是中文', F.nextStep(F.defaultSave()).text === '先去设计台：拨动开关，认识 NAND 与 LATCH 两块积木。');
 }
 
+// ---------- 30. 多语言：日/韩/西（第 59–61 轮） ----------
+{
+  const I18N = require('./i18n.js');
+  require('./i18n-ja.js'); require('./i18n-ko.js'); require('./i18n-es.js');
+  check('i18n：五门语言都在词典里', ['zh', 'en', 'ja', 'ko', 'es'].every(l => !!I18N.I18N[l]));
+  check('i18n：日/韩/西各 140 key', ['ja', 'ko', 'es'].every(l => Object.keys(I18N.I18N[l]).length === 140));
+  check('i18n：日/韩/西 key 与中文完全一致',
+    ['ja', 'ko', 'es'].every(l => {
+      const zk = Object.keys(I18N.I18N.zh).sort().join(',');
+      return Object.keys(I18N.I18N[l]).sort().join(',') === zk;
+    }));
+  I18N.setLang('ja');
+  check('i18n：日文下一步', /設計台/.test(I18N.t('next.prologue')));
+  check('i18n：日文 nextStep 跟语言走', /設計台/.test(F.nextStep(F.defaultSave()).text));
+  I18N.setLang('ko');
+  check('i18n：韩文下一步', /설계대/.test(I18N.t('next.prologue')));
+  I18N.setLang('es');
+  check('i18n：西文下一步', /Mesa de diseño/.test(I18N.t('next.prologue')));
+  I18N.setLang('zh');
+  check('i18n：切回中文', I18N.currentLang() === 'zh');
+}
+
 console.log('\n' + lines.join('\n'));
 console.log(`\n合计：${pass} 通过 / ${fail} 失败`);
 process.exit(fail ? 1 : 0);

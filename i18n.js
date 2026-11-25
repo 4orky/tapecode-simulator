@@ -353,6 +353,21 @@
     hooks.forEach(function (fn) { try { fn(l); } catch (e) {} });
     return true;
   }
+  // 单语言文件注册（第 59–61 轮）：i18n-ja/ko/es.js 各调一次 register。
+  // 若用户上次选的就是这门语言，注册完成后立即应用（脚本后加载的场景）。
+  function register(l, dict) {
+    if (!dict || typeof dict !== 'object') return false;
+    I18N[l] = dict;
+    buildLangSelect();
+    var stored = null;
+    try { stored = root.localStorage && root.localStorage.getItem(LS_KEY); } catch (e) {}
+    if ((_lang === l || stored === l) && root.document) {
+      _lang = l;
+      applyI18n();
+      hooks.forEach(function (fn) { try { fn(l); } catch (e) {} });
+    }
+    return true;
+  }
   function initLangSelect() {
     if (!root.document) return;
     var sel = root.document.getElementById('lang-select');
@@ -360,7 +375,7 @@
     applyI18n();
   }
   var api = { I18N: I18N, LANG_NAMES: LANG_NAMES, LS_KEY: LS_KEY,
-    currentLang: currentLang, t: t, setLang: setLang, onChange: onChange,
+    currentLang: currentLang, t: t, setLang: setLang, register: register, onChange: onChange,
     applyI18n: applyI18n, initLangSelect: initLangSelect };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.TapeI18n = api;

@@ -132,6 +132,25 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   q('#lang-select').dispatchEvent(new window.Event('change', { bubbles: true }));
   await sleep(200);
   check('语言：切回中文', q('button[data-nav="town"]').textContent === '🏘 小镇地图' && window.localStorage.getItem('tapecode-lang') === 'zh');
+  // 日/韩/西（第 59–61 轮）：切换器五门语言齐了，切过去导航真变
+  check('语言：切换器有五门语言', q('#lang-select').options.length === 5);
+  q('#lang-select').value = 'ja';
+  q('#lang-select').dispatchEvent(new window.Event('change', { bubbles: true }));
+  await sleep(200);
+  check('语言：切日文后导航变日文', q('button[data-nav="town"]').textContent === '🏘 町の地図');
+  check('语言：切日文后下一步变日文', /タスクボード/.test(q('#next-step').textContent));
+  q('#lang-select').value = 'ko';
+  q('#lang-select').dispatchEvent(new window.Event('change', { bubbles: true }));
+  await sleep(200);
+  check('语言：切韩文后导航变韩文', q('button[data-nav="town"]').textContent === '🏘 마을 지도');
+  q('#lang-select').value = 'es';
+  q('#lang-select').dispatchEvent(new window.Event('change', { bubbles: true }));
+  await sleep(200);
+  check('语言：切西文后导航变西文', q('button[data-nav="town"]').textContent === '🏘 Mapa del pueblo');
+  q('#lang-select').value = 'zh';
+  q('#lang-select').dispatchEvent(new window.Event('change', { bubbles: true }));
+  await sleep(200);
+  check('语言：切回中文收尾', q('button[data-nav="town"]').textContent === '🏘 小镇地图');
 
   // ---------- 序章 ----------
   nav('prologue');
