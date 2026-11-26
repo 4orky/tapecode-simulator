@@ -256,6 +256,16 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   check('第一章：验货真值表 8/8 全过', /真值表全过：8\/8/.test(q('#tt-panel').textContent), q('#status-line').textContent);
   check('第一章：通过记录 9 门 3 星', save().passed && save().passed.fa && save().passed.fa.gates === 9 && save().passed.fa.stars === 3);
   check('第一章：画布草稿已存档', save().drafts && save().drafts.fa && save().drafts.fa.gates.length === 9);
+  // 切题签换草稿（第 66 轮回归）：切 adder4 之前画布还是 fa 的草稿，题签一换就该换
+  //（旧 currentDraft 只在 B.draft 为空时创建，切签后输入轨仍是 3 个，除 fa 外 5 道题没法画）。
+  click(q('.ptab[data-p="adder4"]'));
+  await sleep(200);
+  check('第一章：切到 4 位加法器，9 个输入轨出现', qa('[data-src^="i:"]').length === 9, qa('[data-src]').length + ' 个源');
+  check('第一章：切到 4 位加法器，教学文案也换了', /4 位加法器/.test(q('#ch1-teach').textContent));
+  click(q('.ptab[data-p="fa"]'));
+  await sleep(200);
+  check('第一章：切回全加器，fa 草稿还在（9 门、3 输入）',
+    qa('[data-gate]').length === 9 && qa('[data-src^="i:"]').length === 3);
   // 触屏拖拽（第 31 轮）：合成 Touch 事件拖 1 号门 +50/+20，存档里的门坐标跟着变
   const touchGate = q('[data-gate="1"]');
   const gx0 = save().drafts.fa.gates.find(g => g.id === 1).x;

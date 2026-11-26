@@ -1527,7 +1527,10 @@
   var BGATE_W = 100, BGATE_H = 52;
 
   function currentDraft() {
-    if (!B.draft) {
+    // 第 66 轮修：切题签只改 B.problemId、不换 B.draft，画布会一直停在上一题的草稿上
+    //（题签高亮和教学文案都换了，输入轨和门却还是上一题的——除 fa 外 5 道题根本没法画）。
+    // 草稿按题号存，切换时按当前题号重取，之前画的不会丢。
+    if (!B.draft || B.draft.problemId !== B.problemId) {
       B.draft = SAVE.drafts[B.problemId] || newDraft(B.problemId);
       SAVE.drafts[B.problemId] = B.draft;
     }
@@ -1536,6 +1539,13 @@
   function persistDraft() {
     SAVE.drafts[B.problemId] = B.draft;
     save();
+  }
+  // 验货状态跟着草稿走（第 66 轮）：验货后记在草稿上，切题签/离开展示再回来能恢复；
+  // 任何改动草稿的操作（接线、拨输入、删线、加门、删门、清空）都要同时清掉它，
+  // 否则改过的电路会顶着旧的“已通过”进流片。
+  function clearVerified() {
+    B.verified = null;
+    if (B.draft) B.draft.verified = null;
   }
   function gateDefaultPos(n) {
     var col = n % 3, row = Math.floor(n / 3);
@@ -1595,7 +1605,7 @@
     var prob = problemById(B.problemId);
     B.draft = currentDraft();
     B.inputs = new Array(prob.nIn).fill(0);
-    B.selSrc = null; B.selGate = null; B.verified = null;
+    B.selSrc = null; B.selGate = null; B.verified = (B.draft && B.draft.verified) || null;
     var tabs = PROBLEMS.map(function (p) {
       var st = SAVE.stars[p.id] || 0;
       return '<button class="ptab' + (p.id === B.problemId ? ' active' : '') + '" data-p="' + p.id + '">' +
@@ -1611,9 +1621,12 @@
     renderCh1Meta();
     drawBuilder();
     drawSimStrip();
-    $('tt-panel').innerHTML = '<p class="hint">点「验货」跑完整真值表：' +
+    $('tt-panel').innerHTML = B.verified
+      ? ''
+      : '<p class="hint">点「验货」跑完整真值表：' +
       (prob.rows === 'all' ? '共 ' + (1 << prob.nIn) + ' 行' : '共 ' + (1 << prob.nIn) + ' 行全验，表里列 16 行抽查') +
       '，错的行会标红。</p>';
+    if (B.verified) renderTruthTable();
     refreshHud();
   }
 
@@ -1723,6 +1736,7 @@
         removeGate(B.draft, B.selGate);
         SAVE.nand += 1;
         B.selGate = null;
+        clearVerified(); // 第 66 轮：删门也没清验货态，改过的电路会顶着旧的“已通过”进流片
         persistDraft();
         drawBuilder(); drawSimStrip(); refreshHud();
         setStatus('已删除门，退回 1 个晶体管。');
@@ -1752,7 +1766,7 @@
         if (!B.selSrc) { setStatus('先点一个信号源：左侧输入脚 / 常量 / 某个门的输出，再点这个输入脚。'); return; }
         var r = connect(B.draft, B.selSrc, { k: 'gate', id: gid, pin: pin });
         if (r.ok) {
-          B.selSrc = null; B.verified = null;
+          B.selSrc = null; clearVerified();
           persistDraft(); drawBuilder(); drawSimStrip();
         } else setStatus('接不上：' + r.reason);
         return;
@@ -1772,7 +1786,7 @@
         if (!dot && parts[0] === 'i') {
           var ii = +parts[1];
           B.inputs[ii] = B.inputs[ii] ? 0 : 1;
-          B.verified = null;
+          clearVerified();
           drawBuilder(); drawSimStrip();
           setStatus(draftProblem(B.draft).inNames[ii] + ' 已拨到 ' + B.inputs[ii] + '。');
           return;
@@ -1788,7 +1802,7 @@
         if (!B.selSrc) { setStatus('先选一个门的输出作为连线源，再点输出脚。'); return; }
         var r2 = connect(B.draft, B.selSrc, { k: 'output', idx: oi });
         if (r2.ok) {
-          B.selSrc = null; B.verified = null;
+          B.selSrc = null; clearVerified();
           persistDraft(); drawBuilder(); drawSimStrip();
         } else setStatus('接不上：' + r2.reason);
         return;
@@ -1797,7 +1811,7 @@
         var w = wire.getAttribute('data-wire').split(':');
         if (w[0] === 'gate') disconnect(B.draft, { k: 'gate', id: +w[1], pin: +w[2] });
         else disconnect(B.draft, { k: 'output', idx: +w[1] });
-        B.verified = null;
+        clearVerified();
         persistDraft(); drawBuilder(); drawSimStrip();
         setStatus('已删除这条线。');
         return;
@@ -1913,13 +1927,15 @@
       var pos = gateDefaultPos(B.draft.gates.length);
       addGate(B.draft, 0, pos.x, pos.y);
       SAVE.nand -= 1;
-      B.verified = null;
+      clearVerified();
       persistDraft(); drawBuilder(); drawSimStrip(); refreshHud();
       setStatus('已放一个 NAND 门（花 1 个晶体管）。点左侧信号源，再点门的输入脚连线。');
     };
     $('btn-verify').onclick = function () {
       var v = verifyTruthTable(B.draft);
       B.verified = v;
+      B.draft.verified = v; // 跟着草稿存下来，切题签回来不用重验
+      save();
       if (!v.ok) {
         setStatus('还不能验货：' + v.reason);
         renderTruthTable();
