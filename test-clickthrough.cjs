@@ -51,6 +51,18 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // ---------- 首次访问欢迎弹窗（第 16 轮） ----------
   check('欢迎弹窗：首次打开出现', !!q('#modal-root .modal') && /欢迎来到《链上造芯厂》/.test(q('#modal-root').textContent));
   check('欢迎弹窗：写明不连钱包、不花真钱', /不连钱包、不花真钱/.test(q('#modal-root').textContent));
+  // 欢迎弹窗里的 NAND 小演示（第 65 轮，FabX 首屏做法）：一句话价值主张 + 可拨的 NAND 门
+  check('欢迎弹窗：一句话价值主张在首屏', /20 分钟玩明白 TapeOut：画电路 → 流片 → 挖矿 → 点亮 CPU/.test(q('#modal-root').textContent));
+  check('欢迎弹窗：NAND 小演示在位，初始 A=0 B=0 输出 1', !!q('#w-nand-a') && q('#w-nand-out').textContent === '1');
+  click(q('#w-nand-a')); // A=1，B=0 → NAND=1
+  await sleep(100);
+  check('欢迎弹窗：NAND 演示拨 A=1，输出仍 1', q('#w-nand-out').textContent === '1');
+  click(q('#w-nand-b')); // A=1，B=1 → NAND=0
+  await sleep(100);
+  check('欢迎弹窗：NAND 演示 A=B=1，输出翻成 0', q('#w-nand-out').textContent === '0');
+  click(q('#w-nand-a')); // A=0，B=1 → NAND=1
+  await sleep(100);
+  check('欢迎弹窗：NAND 演示拨回 A=0，输出回 1', q('#w-nand-out').textContent === '1');
   click(q('#btn-welcome-start'));
   await sleep(200);
   check('欢迎弹窗：点开始造芯后关闭并进设计台', q('#modal-root').style.display === 'none' && q('#view-prologue').style.display !== 'none');
@@ -93,6 +105,17 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     qa('.j-dot').length === 7 &&
     qa('.j-dot').map(el => el.getAttribute('data-cat')).join(',') === 'trade,design,design,mine,trade,cpu,trade');
   check('小镇：下一步引导指向任务板（欢迎弹窗已带用户逛过设计台）', /任务板/.test(q('#next-step').textContent));
+  check('小镇：首屏导语第一句就是价值主张', /20 分钟玩明白 TapeOut/.test(q('#view-town p').textContent));
+  // 黄金路径常驻指示（第 65 轮）：五步常驻，当前步高亮、走过的打勾，点一步直达
+  check('黄金路径：5 步常驻（设计台→流片厂→矿场→集市→点亮 CPU）',
+    qa('.gp-step').length === 5 &&
+    qa('.gp-step').map(el => el.textContent).join('|') === '设计台|流片厂|矿场|集市|CPU 神殿');
+  check('黄金路径：开局当前步是设计台', q('.gp-step.now') && q('.gp-step.now').textContent === '设计台');
+  click(q('[data-gp="market"]'));
+  await sleep(200);
+  check('黄金路径：点集市一步直达集市视图', q('#view-market').style.display !== 'none');
+  nav('town');
+  await sleep(200);
   check('小镇：里程碑 10 个', qa('.ms-chip').length === 10);
   check('小镇：天际线已画', !!q('.town-skyline svg'));
   check('小镇：建筑有分类配色（矿场 data-cat=mine）', !!q('.building[data-cat="mine"]'));
@@ -125,6 +148,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   check('语言：切英文后小镇标题变英文', q('#view-town h2').textContent === 'Eco Town');
   check('语言：切英文后下一步变英文', /Next: /.test(q('#next-step').textContent) && /Task Board/.test(q('#next-step').textContent));
   check('语言：切英文后 HUD 目标变英文', /Next: /.test(q('#hud-goal').textContent));
+  check('语言：切英文后黄金路径变英文',
+    qa('.gp-step').map(el => el.textContent).join('|') === 'Workbench|Tape-Out Fab|Mine|Market|CPU Shrine');
   check('语言：切英文后建筑名变英文', q('.building.now .b-name').textContent === 'Task Board ✓' || q('.building.now .b-name').textContent === 'Task Board');
   check('语言：选择存 localStorage', window.localStorage.getItem('tapecode-lang') === 'en');
   check('语言：html lang 属性跟上', q('html').getAttribute('lang') === 'en');
@@ -270,6 +295,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   click(q('#m-close'));
   await sleep(100);
   check('流片：收藏里有 1 张卡', qa('.nft-card').length === 1);
+  nav('town'); await sleep(200);
+  check('黄金路径：流片后流片厂一步打勾、当前步变矿场',
+    /✓ 流片厂/.test(q('#gold-path').textContent) && q('.gp-step.now').textContent === '矿场');
 
   // ---------- 挖矿 ----------
   nav('mining');
@@ -286,6 +314,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     afterSettle.day === 1 && Math.abs(afterSettle.bem - expected) < 1e-9,
     '收入 ' + afterSettle.bem.toFixed(4) + '，期望 ' + expected.toFixed(4));
   check('挖矿：结算结果文案含游戏 BEM', /游戏 BEM/.test(q('#settle-result').textContent));
+  check('黄金路径：结算后矿场一步打勾、当前步变集市',
+    /✓ 矿场/.test(q('#gold-path').textContent) && q('.gp-step.now').textContent === '集市');
   // 结算账本（第 13 轮）：结算 1 天后账本有 1 行“第 1 天”
   check('账本：结算后账本有 1 行', qa('.ledger tr').length === 2 && /第 1 天/.test(q('.ledger').textContent));
   check('账本：账本余额 = 当前 BEM', q('.ledger').textContent.includes(afterSettle.bem.toFixed(2)));
@@ -323,6 +353,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await sleep(100);
   check('DeWEB 小镇：开店成功，地址 tape://…',
     save().sites.length === 1 && /^tape:\/\//.test(save().sites[0].addr), save().sites[0] && save().sites[0].addr);
+  check('黄金路径：开网站后集市一步打勾、当前步变 CPU 神殿',
+    /✓ 集市/.test(q('#gold-path').textContent) && q('.gp-step.now').textContent === 'CPU 神殿');
   click(q('[data-site]'));
   await sleep(100);
   check('DeWEB 小镇：进店弹窗显示店名与地址',
@@ -350,6 +382,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   check('CPU 神殿：跑 3 拍计数 = 3', /计数 = 3/.test(q('#cpu-panel').textContent), q('.cpu-count') && q('.cpu-count').textContent);
   for (let i = 0; i < 13; i++) { click(q('#btn-cpu-beat')); await sleep(50); }
   check('CPU 神殿：跑满 16 拍点亮 CPU', /已点亮/.test(q('#cpu-panel').textContent) && save().cpu.lit === true);
+  check('黄金路径：点亮 CPU 后五步全打勾', qa('.gp-step.done').length === 5 && !q('.gp-step.now'));
   check('CPU 神殿：点亮后厂长履历出现', /厂长履历/.test(q('#cpu-panel').textContent) && !!q('#btn-cpu-share'));
   // 自动跑（第 34 轮）：开自动 → 时钟前进 → 关自动 → 时钟停住
   const clockBefore = save().cpu.clock;

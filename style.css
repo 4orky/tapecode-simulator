@@ -65,6 +65,15 @@ button.active { background: #1d4ed8; border-color: #3b82f6; color: #fff; }
 .j-dot[data-cat="cards"] { background: #f472b6; }
 .j-arrow { color: #64748b; }
 .j-note { color: #8fa8c4; font-size: 12px; margin-left: 6px; }
+
+/* ---- 黄金路径常驻指示（第 65 轮）：一个强调色（金）到底，当前步填金、走过的金字打勾 ---- */
+.gold-path { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0 0; font-size: 13px; }
+.gp-label { color: #f5c542; font-weight: bold; margin-right: 2px; }
+.gp-step { padding: 4px 10px; border-radius: 20px; border: 1px solid #2b5a8a; color: #8fa8c4; background: transparent; }
+.gp-step.done { color: #f5c542; border-color: #f5c542; }
+.gp-step.now { background: #f5c542; border-color: #f5c542; color: #0f172a; font-weight: bold; }
+.gp-step.later { opacity: 0.55; }
+.gp-arrow { color: #64748b; }
 .town-group { font-size: 13px; color: #8fa8c4; font-weight: normal; margin: 14px 0 8px; letter-spacing: 1px; }
 .town-subgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
 .town-fold { margin: 10px 0; }
@@ -217,6 +226,16 @@ td.sig-0 { color: #127a15; }
 .modal { background: #10233a; border: 1px solid #2b5a8a; border-radius: 12px; padding: 20px; max-width: 560px; width: calc(100% - 40px); max-height: 85vh; overflow: auto; }
 .modal h3 { margin-top: 0; }
 .modal-btns { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+/* ---- 欢迎弹窗里的 NAND 小演示（第 65 轮，FabX 首屏做法）：灯色沿用 Logisim，1 亮绿、0 暗绿 ---- */
+.nand-demo { background: #0f2036; border: 1px solid #2b5a8a; border-radius: 10px; padding: 12px 14px; margin: 12px 0; }
+.nd-title { font-weight: bold; color: #f1f5f9; margin: 0 0 8px; }
+.nd-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.nd-sw { border: 1px solid #2b5a8a; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.nd-sw:hover { border-color: #f5c542; }
+.nd-out { font-size: 14px; color: #cbd5e1; }
+.nd-lamp { width: 14px; height: 14px; border-radius: 50%; background: #127a15; display: inline-block; }
+.nd-lamp.on { background: #37d13a; box-shadow: 0 0 8px #37d13a; }
 
 /* ---- 集市（第四章） ---- */
 .stall-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }

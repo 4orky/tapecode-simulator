@@ -754,7 +754,7 @@ function appendFullAdder(draft, aSrc, bSrc, cinSrc) {
   const I18N = require('./i18n.js');
   require('./i18n-ja.js'); require('./i18n-ko.js'); require('./i18n-es.js');
   check('i18n：五门语言都在词典里', ['zh', 'en', 'ja', 'ko', 'es'].every(l => !!I18N.I18N[l]));
-  check('i18n：日/韩/西各 140 key', ['ja', 'ko', 'es'].every(l => Object.keys(I18N.I18N[l]).length === 140));
+  check('i18n：日/韩/西各 144 key', ['ja', 'ko', 'es'].every(l => Object.keys(I18N.I18N[l]).length === 144));
   check('i18n：日/韩/西 key 与中文完全一致',
     ['ja', 'ko', 'es'].every(l => {
       const zk = Object.keys(I18N.I18N.zh).sort().join(',');

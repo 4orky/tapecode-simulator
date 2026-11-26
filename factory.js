@@ -1177,6 +1177,33 @@
     else if (kind === 'lit') { playTone(523, 0.2, 0); playTone(659, 0.2, 0.12); playTone(784, 0.3, 0.24); }
   }
 
+  /* ================= 黄金路径常驻指示（第 65 轮，WINNERS.md 第 54 轮：FabX 闭环 + AngelHack 一个用户一个动作一个可见结果） ================= */
+  // 顶部常驻五步：设计台 → 流片厂 → 矿场 → 集市（BEM 花回生态）→ 点亮 CPU。
+  // 走过的打勾、当前步高亮；点一步直达该视图。完成判定与 nextStep() 的进度口径一致，
+  // 集市一步认“真把 BEM 花出去了”（开网站 / 参加抽奖 / 加购存储）。
+  var GOLD_PATH = [
+    { id: 'prologue', name: 'b.prologue.name', desc: 'b.prologue.desc', done: function () { return Object.keys(SAVE.passed).length > 0; } },
+    { id: 'tapeout', name: 'b.tapeout.name', desc: 'b.tapeout.desc', done: function () { return SAVE.taped.length > 0; } },
+    { id: 'mining', name: 'b.mining.name', desc: 'b.mining.desc', done: function () { return (SAVE.minedTotal || 0) > 0; } },
+    { id: 'market', name: 'b.market.name', desc: 'b.market.desc', done: function () { return SAVE.sites.length > 0 || (SAVE.lottery && SAVE.lottery.entered) || SAVE.relayGiB > 0; } },
+    { id: 'cpu', name: 'b.cpu.name', desc: 'b.cpu.desc', done: function () { return !!SAVE.cpu.lit; } }
+  ];
+  function renderGoldPath() {
+    var bar = $('gold-path');
+    if (!bar) return;
+    var currentSet = false;
+    bar.innerHTML = '<span class="gp-label">' + t('gold.label') + '</span>' + GOLD_PATH.map(function (s) {
+      var done = s.done();
+      var cls = done ? 'done' : (!currentSet ? 'now' : 'later');
+      if (!done) currentSet = true;
+      return '<button class="gp-step ' + cls + '" data-gp="' + s.id + '" title="' + esc(t(s.desc)) + '">' +
+        (done ? '✓ ' : '') + t(s.name) + '</button>';
+    }).join('<span class="gp-arrow">→</span>');
+    Array.prototype.forEach.call(bar.querySelectorAll('[data-gp]'), function (b) {
+      b.onclick = function () { switchView(b.getAttribute('data-gp')); };
+    });
+  }
+
   function refreshHud() {
     $('res-nand').textContent = SAVE.nand;
     $('res-latch').textContent = SAVE.latch;
@@ -1192,6 +1219,7 @@
       BUILDINGS.forEach(function (x) { if (x.id === ns.target) bn = x; });
       goal.textContent = t('hud.nextPrefix') + (bn ? t(bn.name) : ns.target);
     }
+    renderGoldPath(); // 第 65 轮：黄金路径常驻指示，HUD 每次刷新都同步
   }
 
   var VIEWS = ['town', 'prologue', 'ch1', 'tapeout', 'mining', 'market', 'cpu', 'factory', 'test1', 'codex', 'sim'];
@@ -1229,16 +1257,34 @@
     root.innerHTML = '';
   }
   // 首次访问欢迎弹窗（第 16 轮）：只出现一次。讲清三件事：这是什么、怎么玩、诚实说明。
+  // 第 65 轮（FabX 首屏做法）：第一句就是一句话价值主张（welcome.p1），下面挂一个
+  // 极小可玩 NAND 门演示——拨动开关、看输出翻转，真 NAND 逻辑现场算，不做假演示。
   // 文案走 i18n 词典（第 58 轮），语言切换时若弹窗还开着就按新语言重画。
   function showWelcome() {
     if (SAVE.visited.welcome) return;
     showModal('<h2>' + t('welcome.title') + '</h2>' +
-      '<p>' + t('welcome.p1') + '</p>' +
+      '<p><b>' + t('welcome.p1') + '</b></p>' +
+      '<div class="nand-demo"><p class="nd-title">' + t('welcome.demoTitle') + '</p>' +
+      '<div class="nd-row"><button class="nd-sw" id="w-nand-a">A = 0</button>' +
+      '<button class="nd-sw" id="w-nand-b">B = 0</button>' +
+      '<span class="nd-out">' + t('welcome.demoOut') + ' <b id="w-nand-out">1</b></span>' +
+      '<span class="nd-lamp on" id="w-nand-lamp"></span></div>' +
+      '<p class="hint">' + t('welcome.demoHint') + '</p></div>' +
       '<p>' + t('welcome.p2') + '</p>' +
       '<p class="hint">' + t('welcome.p3') + '</p>' +
       '<div class="toolbar"><button class="btn-primary" id="btn-welcome-start">' + t('welcome.start') + '</button>' +
       '<button id="btn-welcome-later">' + t('welcome.later') + '</button></div>',
       function () {
+        var a = 0, b = 0;
+        function draw() {
+          var out = (a && b) ? 0 : 1; // 真 NAND：只有 A、B 都是 1，输出才是 0
+          $('w-nand-a').textContent = 'A = ' + a;
+          $('w-nand-b').textContent = 'B = ' + b;
+          $('w-nand-out').textContent = out;
+          $('w-nand-lamp').className = 'nd-lamp' + (out ? ' on' : '');
+        }
+        $('w-nand-a').onclick = function () { a = a ? 0 : 1; draw(); };
+        $('w-nand-b').onclick = function () { b = b ? 0 : 1; draw(); };
         function done(go) { SAVE.visited.welcome = true; save(); closeModal(); if (go) switchView('prologue'); }
         $('btn-welcome-start').onclick = function () { done(true); };
         $('btn-welcome-later').onclick = function () { done(false); };
